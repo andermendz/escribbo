@@ -45,7 +45,7 @@ on:
         default: false
 
 env:
-  TSC_VERSION: "0.9.0"
+  TSC_VERSION: "0.9.1"
 
 jobs:
   build:

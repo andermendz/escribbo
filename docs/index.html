@@ -1,0 +1,1112 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Escribbo — Offline speech-to-text</title>
+    <meta
+      name="description"
+      content="Escribbo is a free, open-source, offline speech-to-text desktop app. Press a shortcut, speak, get text in any app."
+    />
+
+    <!-- Google Fonts: Inter + JetBrains Mono. Close to Roboto Flex feel without the weight. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Markdown renderer for release body -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+      /* -----------------------------------------------------------------
+         Material 3 tokens. Light + dark schemes generated from seed
+         #6366f1 using the Material Color Utilities reference palettes.
+         Kept static here so the page has zero build deps.
+      ----------------------------------------------------------------- */
+      :root {
+        --escribbo-logo: #000000;
+        --md-sys-color-primary: #4c51bf;
+        --md-sys-color-on-primary: #ffffff;
+        --md-sys-color-primary-container: #dfe0ff;
+        --md-sys-color-on-primary-container: #000f5c;
+
+        --md-sys-color-secondary: #5a5d72;
+        --md-sys-color-on-secondary: #ffffff;
+        --md-sys-color-secondary-container: #dfe1f9;
+        --md-sys-color-on-secondary-container: #171a2c;
+
+        --md-sys-color-tertiary: #77536c;
+        --md-sys-color-on-tertiary: #ffffff;
+        --md-sys-color-tertiary-container: #ffd7ee;
+        --md-sys-color-on-tertiary-container: #2d1126;
+
+        --md-sys-color-error: #ba1a1a;
+        --md-sys-color-on-error: #ffffff;
+
+        --md-sys-color-background: #fefbff;
+        --md-sys-color-on-background: #1b1b1f;
+        --md-sys-color-surface: #fefbff;
+        --md-sys-color-on-surface: #1b1b1f;
+        --md-sys-color-surface-variant: #e4e1ec;
+        --md-sys-color-on-surface-variant: #47464f;
+        --md-sys-color-surface-container: #f2eff7;
+        --md-sys-color-surface-container-high: #eceaf2;
+        --md-sys-color-surface-container-highest: #e6e3eb;
+
+        --md-sys-color-outline: #77767f;
+        --md-sys-color-outline-variant: #c7c5d0;
+
+        --md-sys-color-inverse-surface: #303036;
+        --md-sys-color-inverse-on-surface: #f3eff7;
+        --md-sys-color-inverse-primary: #bdc2ff;
+
+        --radius-xs: 4px;
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 28px;
+        --radius-full: 9999px;
+
+        --shadow-e1: 0 1px 2px 0 rgb(0 0 0 / 0.2), 0 1px 3px 1px rgb(0 0 0 / 0.1);
+        --shadow-e2: 0 1px 2px 0 rgb(0 0 0 / 0.2), 0 2px 6px 2px rgb(0 0 0 / 0.1);
+        --shadow-e3: 0 4px 8px 3px rgb(0 0 0 / 0.1), 0 1px 3px 0 rgb(0 0 0 / 0.2);
+      }
+
+      [data-theme="dark"] {
+        --escribbo-logo: #ffffff;
+        --md-sys-color-primary: #bdc2ff;
+        --md-sys-color-on-primary: #1e2578;
+        --md-sys-color-primary-container: #343e90;
+        --md-sys-color-on-primary-container: #dfe0ff;
+
+        --md-sys-color-secondary: #c3c5dd;
+        --md-sys-color-on-secondary: #2c2f42;
+        --md-sys-color-secondary-container: #424659;
+        --md-sys-color-on-secondary-container: #dfe1f9;
+
+        --md-sys-color-tertiary: #e6bad4;
+        --md-sys-color-on-tertiary: #44263c;
+        --md-sys-color-tertiary-container: #5d3c53;
+        --md-sys-color-on-tertiary-container: #ffd7ee;
+
+        --md-sys-color-error: #ffb4ab;
+        --md-sys-color-on-error: #690005;
+
+        --md-sys-color-background: #131316;
+        --md-sys-color-on-background: #e5e1e9;
+        --md-sys-color-surface: #131316;
+        --md-sys-color-on-surface: #e5e1e9;
+        --md-sys-color-surface-variant: #47464f;
+        --md-sys-color-on-surface-variant: #c8c5d0;
+        --md-sys-color-surface-container: #1f1f23;
+        --md-sys-color-surface-container-high: #292a2e;
+        --md-sys-color-surface-container-highest: #343539;
+
+        --md-sys-color-outline: #918f9a;
+        --md-sys-color-outline-variant: #47464f;
+
+        --md-sys-color-inverse-surface: #e5e1e9;
+        --md-sys-color-inverse-on-surface: #303036;
+        --md-sys-color-inverse-primary: #4c51bf;
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root:not([data-theme="dark"]) {
+          color-scheme: light;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        background: var(--md-sys-color-background);
+        color: var(--md-sys-color-on-background);
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      code,
+      pre {
+        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
+          Monaco, Consolas, monospace;
+        font-size: 0.88em;
+      }
+
+      a {
+        color: var(--md-sys-color-primary);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+
+      /* -----------------------------------------------------------------
+         Layout + top app bar
+      ----------------------------------------------------------------- */
+      .app-bar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 24px;
+        background: color-mix(in srgb, var(--md-sys-color-surface) 80%, transparent);
+        backdrop-filter: saturate(180%) blur(16px);
+        -webkit-backdrop-filter: saturate(180%) blur(16px);
+        border-bottom: 1px solid var(--md-sys-color-outline-variant);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        font-size: 18px;
+      }
+      .brand-logo {
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        color: var(--escribbo-logo);
+        transition: color 200ms ease;
+      }
+      .brand-logo svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .nav {
+        display: flex;
+        gap: 4px;
+        margin-inline-start: auto;
+        align-items: center;
+      }
+      .nav a {
+        padding: 8px 14px;
+        border-radius: var(--radius-full);
+        color: var(--md-sys-color-on-surface);
+        font-weight: 500;
+        font-size: 14px;
+      }
+      .nav a:hover {
+        background: color-mix(
+          in srgb,
+          var(--md-sys-color-primary) 8%,
+          transparent
+        );
+        text-decoration: none;
+      }
+      .icon-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius-full);
+        border: none;
+        background: transparent;
+        color: var(--md-sys-color-on-surface-variant);
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        transition: background 150ms ease;
+      }
+      .icon-btn:hover {
+        background: color-mix(
+          in srgb,
+          var(--md-sys-color-primary) 8%,
+          transparent
+        );
+        color: var(--md-sys-color-on-surface);
+      }
+
+      .wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* -----------------------------------------------------------------
+         Hero
+      ----------------------------------------------------------------- */
+      .hero {
+        position: relative;
+        padding: 96px 24px 80px;
+        overflow: hidden;
+      }
+      .hero::before {
+        content: "";
+        position: absolute;
+        inset: -20% -10% auto -10%;
+        height: 520px;
+        background:
+          radial-gradient(
+            ellipse at 20% 20%,
+            color-mix(in srgb, var(--md-sys-color-primary) 32%, transparent),
+            transparent 55%
+          ),
+          radial-gradient(
+            ellipse at 80% 30%,
+            color-mix(in srgb, var(--md-sys-color-tertiary) 28%, transparent),
+            transparent 60%
+          );
+        filter: blur(60px);
+        z-index: -1;
+      }
+      .hero-inner {
+        max-width: 840px;
+        margin: 0 auto;
+        text-align: center;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        border-radius: var(--radius-full);
+        background: var(--md-sys-color-secondary-container);
+        color: var(--md-sys-color-on-secondary-container);
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.1px;
+      }
+      .chip .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--md-sys-color-primary);
+      }
+      .hero h1 {
+        font-size: clamp(40px, 6vw, 68px);
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        margin: 20px 0 16px;
+        font-weight: 700;
+      }
+      .hero h1 .grad {
+        background: linear-gradient(
+          135deg,
+          var(--md-sys-color-primary),
+          var(--md-sys-color-tertiary)
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .hero p.lead {
+        font-size: clamp(16px, 1.5vw, 19px);
+        color: var(--md-sys-color-on-surface-variant);
+        max-width: 640px;
+        margin: 0 auto 32px;
+      }
+      .cta-row {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 44px;
+        padding: 0 22px;
+        border-radius: var(--radius-full);
+        font-weight: 500;
+        font-size: 15px;
+        border: none;
+        cursor: pointer;
+        transition:
+          background 150ms ease,
+          box-shadow 150ms ease,
+          transform 100ms ease;
+        text-decoration: none;
+      }
+      .btn:hover {
+        text-decoration: none;
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
+      .btn-filled {
+        background: var(--md-sys-color-primary);
+        color: var(--md-sys-color-on-primary);
+      }
+      .btn-filled:hover {
+        box-shadow: var(--shadow-e1);
+        background: color-mix(in srgb, var(--md-sys-color-primary) 92%, black);
+      }
+      .btn-tonal {
+        background: var(--md-sys-color-secondary-container);
+        color: var(--md-sys-color-on-secondary-container);
+      }
+      .btn-tonal:hover {
+        background: color-mix(
+          in srgb,
+          var(--md-sys-color-secondary-container) 88%,
+          var(--md-sys-color-primary)
+        );
+      }
+      .btn-outlined {
+        background: transparent;
+        color: var(--md-sys-color-primary);
+        border: 1px solid var(--md-sys-color-outline);
+      }
+      .btn-outlined:hover {
+        background: color-mix(
+          in srgb,
+          var(--md-sys-color-primary) 8%,
+          transparent
+        );
+      }
+
+      /* -----------------------------------------------------------------
+         Feature grid
+      ----------------------------------------------------------------- */
+      section.features {
+        padding: 80px 0;
+      }
+      .section-title {
+        text-align: center;
+        font-size: clamp(26px, 3vw, 36px);
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        margin: 0 0 8px;
+      }
+      .section-sub {
+        text-align: center;
+        color: var(--md-sys-color-on-surface-variant);
+        margin: 0 auto 48px;
+        max-width: 560px;
+      }
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+      }
+      .feature-card {
+        padding: 24px;
+        border-radius: var(--radius-lg);
+        background: var(--md-sys-color-surface-container);
+        border: 1px solid var(--md-sys-color-outline-variant);
+      }
+      .feature-card .ico {
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius-md);
+        background: var(--md-sys-color-primary-container);
+        color: var(--md-sys-color-on-primary-container);
+        display: grid;
+        place-items: center;
+        margin-bottom: 12px;
+      }
+      .feature-card h3 {
+        margin: 4px 0 6px;
+        font-size: 17px;
+        font-weight: 600;
+      }
+      .feature-card p {
+        margin: 0;
+        color: var(--md-sys-color-on-surface-variant);
+        font-size: 14px;
+      }
+
+      /* -----------------------------------------------------------------
+         Downloads
+      ----------------------------------------------------------------- */
+      section.downloads {
+        padding: 24px 0 80px;
+      }
+      .dl-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+      }
+      .dl-card {
+        padding: 20px;
+        border-radius: var(--radius-lg);
+        background: var(--md-sys-color-surface-container);
+        border: 1px solid var(--md-sys-color-outline-variant);
+      }
+      .dl-card h3 {
+        margin: 0 0 4px;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .dl-card p {
+        margin: 0 0 14px;
+        font-size: 13px;
+        color: var(--md-sys-color-on-surface-variant);
+      }
+      .dl-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .dl-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 32px;
+        padding: 0 12px;
+        border-radius: var(--radius-full);
+        background: var(--md-sys-color-surface-variant);
+        color: var(--md-sys-color-on-surface-variant);
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .dl-chip:hover {
+        background: color-mix(
+          in srgb,
+          var(--md-sys-color-primary) 14%,
+          var(--md-sys-color-surface-variant)
+        );
+        color: var(--md-sys-color-on-surface);
+        text-decoration: none;
+      }
+
+      /* -----------------------------------------------------------------
+         Releases timeline
+      ----------------------------------------------------------------- */
+      section.releases {
+        padding: 40px 0 120px;
+      }
+      .release-controls {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 32px;
+      }
+
+      #release-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .release {
+        position: relative;
+        padding: 24px;
+        border-radius: var(--radius-lg);
+        background: var(--md-sys-color-surface-container);
+        border: 1px solid var(--md-sys-color-outline-variant);
+        transition: border-color 150ms ease, box-shadow 150ms ease;
+      }
+      .release:hover {
+        border-color: color-mix(
+          in srgb,
+          var(--md-sys-color-primary) 40%,
+          var(--md-sys-color-outline-variant)
+        );
+        box-shadow: var(--shadow-e1);
+      }
+      .release.latest {
+        border-color: var(--md-sys-color-primary);
+        background: color-mix(
+          in srgb,
+          var(--md-sys-color-primary) 6%,
+          var(--md-sys-color-surface-container)
+        );
+      }
+      .release-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .release-tag {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      .release-meta {
+        color: var(--md-sys-color-on-surface-variant);
+        font-size: 13px;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        height: 22px;
+        padding: 0 10px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+        border-radius: var(--radius-full);
+      }
+      .badge-latest {
+        background: var(--md-sys-color-primary);
+        color: var(--md-sys-color-on-primary);
+      }
+      .badge-pre {
+        background: var(--md-sys-color-tertiary-container);
+        color: var(--md-sys-color-on-tertiary-container);
+      }
+      .release-body {
+        color: var(--md-sys-color-on-surface);
+        font-size: 14.5px;
+      }
+      .release-body h1,
+      .release-body h2,
+      .release-body h3 {
+        font-size: 15px;
+        font-weight: 600;
+        margin: 18px 0 8px;
+        color: var(--md-sys-color-on-surface);
+      }
+      .release-body ul,
+      .release-body ol {
+        margin: 8px 0;
+        padding-left: 20px;
+      }
+      .release-body li {
+        margin: 4px 0;
+      }
+      .release-body code {
+        background: var(--md-sys-color-surface-container-high);
+        padding: 1px 6px;
+        border-radius: 4px;
+      }
+      .release-body pre {
+        background: var(--md-sys-color-surface-container-highest);
+        border: 1px solid var(--md-sys-color-outline-variant);
+        padding: 12px 14px;
+        border-radius: var(--radius-md);
+        overflow-x: auto;
+      }
+      .release-body pre code {
+        background: transparent;
+        padding: 0;
+      }
+      .release-body blockquote {
+        border-left: 3px solid var(--md-sys-color-primary);
+        margin: 12px 0;
+        padding: 4px 14px;
+        color: var(--md-sys-color-on-surface-variant);
+        background: color-mix(
+          in srgb,
+          var(--md-sys-color-primary) 6%,
+          transparent
+        );
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      }
+
+      .skeleton {
+        height: 120px;
+        background: linear-gradient(
+          90deg,
+          var(--md-sys-color-surface-container) 25%,
+          var(--md-sys-color-surface-container-high) 50%,
+          var(--md-sys-color-surface-container) 75%
+        );
+        background-size: 400% 100%;
+        border-radius: var(--radius-lg);
+        animation: shimmer 1.4s infinite linear;
+      }
+      @keyframes shimmer {
+        0% {
+          background-position: 100% 0;
+        }
+        100% {
+          background-position: -100% 0;
+        }
+      }
+
+      .error-state {
+        padding: 32px;
+        border-radius: var(--radius-lg);
+        background: color-mix(
+          in srgb,
+          var(--md-sys-color-error) 10%,
+          var(--md-sys-color-surface-container)
+        );
+        border: 1px solid color-mix(
+          in srgb,
+          var(--md-sys-color-error) 40%,
+          var(--md-sys-color-outline-variant)
+        );
+        color: var(--md-sys-color-on-surface);
+        text-align: center;
+      }
+
+      footer {
+        padding: 40px 24px 80px;
+        border-top: 1px solid var(--md-sys-color-outline-variant);
+        color: var(--md-sys-color-on-surface-variant);
+        font-size: 13px;
+      }
+      footer .wrap {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      @media (max-width: 640px) {
+        .app-bar { padding: 12px 16px; }
+        .nav a { display: none; }
+        .wrap { padding: 0 16px; }
+        .hero { padding: 72px 16px 56px; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ===================== App Bar ===================== -->
+    <header class="app-bar">
+      <div class="brand">
+        <span class="brand-logo" aria-hidden="true">
+          <svg
+            viewBox="0 0 48 48"
+            xmlns="http://www.w3.org/2000/svg"
+            stroke="var(--escribbo-logo)"
+            fill="var(--escribbo-logo)"
+          >
+            <path
+              d="M16 24H9C6.23858 24 4 26.2386 4 29C4 31.7614 6.23858 34 9 34H39C41.7614 34 44 36.2386 44 39C44 41.7614 41.7614 44 39 44H18"
+              stroke-width="5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              fill="none"
+            />
+            <path
+              fill-rule="evenodd"
+              clip-rule="evenodd"
+              d="M24 24V19L39 4L44 9L29 24H24Z"
+              stroke-width="5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </span>
+        <span>Escribbo</span>
+      </div>
+      <nav class="nav">
+        <a href="#features">Features</a>
+        <a href="#downloads">Download</a>
+        <a href="#releases">Releases</a>
+        <a
+          href="https://github.com/andermendz/escribbo"
+          target="_blank"
+          rel="noopener"
+          >GitHub</a
+        >
+        <button
+          class="icon-btn"
+          id="theme-toggle"
+          aria-label="Toggle theme"
+          title="Toggle theme"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </nav>
+    </header>
+
+    <!-- ===================== Hero ===================== -->
+    <section class="hero">
+      <div class="hero-inner">
+        <span class="chip">
+          <span class="dot"></span>
+          <span id="hero-version">Loading latest…</span>
+        </span>
+        <h1>
+          Offline <span class="grad">speech-to-text</span><br />
+          that stays on your machine.
+        </h1>
+        <p class="lead">
+          Press a shortcut, speak, and have your words appear in any text field.
+          Whisper or Parakeet, running entirely on your own computer. Free and
+          open source.
+        </p>
+        <div class="cta-row">
+          <a
+            class="btn btn-filled"
+            href="#downloads"
+            id="cta-download"
+            >Download</a
+          >
+          <a
+            class="btn btn-tonal"
+            href="https://github.com/andermendz/escribbo"
+            target="_blank"
+            rel="noopener"
+            >View on GitHub</a
+          >
+          <a class="btn btn-outlined" href="#releases">Release notes</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== Features ===================== -->
+    <section class="features" id="features">
+      <div class="wrap">
+        <h2 class="section-title">Built for focus.</h2>
+        <p class="section-sub">
+          Simple, private, keyboard-driven. Escribbo does one thing and stays
+          out of the way.
+        </p>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="ico">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v4"/></svg>
+            </div>
+            <h3>Fully offline</h3>
+            <p>
+              No audio leaves your machine. Whisper and Parakeet run locally
+              with GPU acceleration when available.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="ico">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M6 16h12"/></svg>
+            </div>
+            <h3>Keyboard-first</h3>
+            <p>
+              Global shortcuts for toggle, push-to-talk, and post-processing.
+              Works across apps on Windows, macOS, and Linux.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="ico">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            </div>
+            <h3>Real-time speeds</h3>
+            <p>
+              Parakeet V3 hits ~5× real-time on a mid-range CPU. Whisper
+              variants scale from lean to large with GPU offload.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="ico">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><circle cx="12" cy="12" r="4"/></svg>
+            </div>
+            <h3>Material You UI</h3>
+            <p>
+              Pick any seed color; the entire interface and recording overlay
+              retint to match. Light and dark themes included.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="ico">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9 1.65 1.65 0 0 0 4.27 7.18l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6 1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c0 .36.1.71.29 1"/></svg>
+            </div>
+            <h3>CLI-friendly</h3>
+            <p>
+              Start hidden, skip the tray, toggle via CLI flags, or bind
+              <code>SIGUSR1/2</code> on Linux. Fits any workflow.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="ico">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7 7 .6-5.5 4.6L18 22l-6-4-6 4 1.5-7.8L2 9.6 9 9z"/></svg>
+            </div>
+            <h3>Open source, MIT</h3>
+            <p>
+              A friendly fork of
+              <a
+                href="https://github.com/cjpais/Handy"
+                target="_blank"
+                rel="noopener"
+                >Handy</a
+              >
+              with a fresh coat of paint. Fork it, hack it, ship it.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== Downloads ===================== -->
+    <section class="downloads" id="downloads">
+      <div class="wrap">
+        <h2 class="section-title">Get Escribbo</h2>
+        <p class="section-sub">
+          Pick a build for your platform. All releases are signed with the
+          project's updater key.
+        </p>
+        <div id="download-grid" class="dl-grid">
+          <!-- populated from latest release -->
+          <div class="dl-card">
+            <h3>Loading builds…</h3>
+            <p>Fetching the latest release from GitHub.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== Releases ===================== -->
+    <section class="releases" id="releases">
+      <div class="wrap">
+        <h2 class="section-title">Releases &amp; changelog</h2>
+        <p class="section-sub">
+          Every version, straight from GitHub. Click the tag on any release to
+          jump to it.
+        </p>
+        <div class="release-controls">
+          <button class="btn btn-tonal" id="load-more" style="display: none">
+            Show older releases
+          </button>
+          <a
+            class="btn btn-outlined"
+            href="https://github.com/andermendz/escribbo/releases"
+            target="_blank"
+            rel="noopener"
+            >All on GitHub ↗</a
+          >
+        </div>
+        <div id="release-list">
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+          <div class="skeleton"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== Footer ===================== -->
+    <footer>
+      <div class="wrap">
+        <div>
+          Escribbo · MIT · forked from
+          <a
+            href="https://github.com/cjpais/Handy"
+            target="_blank"
+            rel="noopener"
+            >Handy</a
+          >
+        </div>
+        <div>
+          <a
+            href="https://github.com/andermendz/escribbo"
+            target="_blank"
+            rel="noopener"
+            >Source</a
+          >
+          &nbsp;·&nbsp;
+          <a
+            href="https://github.com/andermendz/escribbo/issues"
+            target="_blank"
+            rel="noopener"
+            >Issues</a
+          >
+          &nbsp;·&nbsp;
+          <a
+            href="https://github.com/andermendz/escribbo/releases"
+            target="_blank"
+            rel="noopener"
+            >Releases</a
+          >
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      // ---------- Theme toggle ----------
+      const root = document.documentElement;
+      const btn = document.getElementById("theme-toggle");
+      const saved = localStorage.getItem("escribbo-site-theme");
+      if (saved) root.setAttribute("data-theme", saved);
+      btn.addEventListener("click", () => {
+        const cur = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        root.setAttribute("data-theme", cur);
+        localStorage.setItem("escribbo-site-theme", cur);
+      });
+
+      // ---------- GitHub releases ----------
+      const REPO = "andermendz/escribbo";
+      const API = `https://api.github.com/repos/${REPO}/releases`;
+      const list = document.getElementById("release-list");
+      const heroVersion = document.getElementById("hero-version");
+      const downloadGrid = document.getElementById("download-grid");
+      const loadMoreBtn = document.getElementById("load-more");
+
+      // Categorize download assets by platform/arch for the grid.
+      function classifyAssets(assets) {
+        const groups = {
+          Windows: {
+            sub: "x64 and ARM64 installers",
+            match: /\.exe$/i,
+            items: [],
+          },
+          "macOS": {
+            sub: "Apple Silicon and Intel",
+            match: /\.(dmg|app\.tar\.gz)$/i,
+            items: [],
+          },
+          Linux: {
+            sub: "AppImage · deb · rpm",
+            match: /\.(AppImage|deb|rpm)$/i,
+            items: [],
+          },
+        };
+        for (const a of assets) {
+          if (/\.sig$/i.test(a.name) || /^latest\.json$/i.test(a.name)) continue;
+          for (const k of Object.keys(groups)) {
+            if (groups[k].match.test(a.name)) groups[k].items.push(a);
+          }
+        }
+        return groups;
+      }
+
+      function formatArchLabel(name) {
+        if (/aarch64|arm64/i.test(name)) return "ARM64";
+        if (/x86_64|amd64|x64/i.test(name)) return "x64";
+        return name.split("_").pop().replace(/\.(AppImage|deb|rpm|exe|dmg|tar\.gz)$/i, "");
+      }
+
+      function formatKindLabel(name) {
+        if (/\.AppImage$/i.test(name)) return "AppImage";
+        if (/\.deb$/i.test(name)) return "deb";
+        if (/\.rpm$/i.test(name)) return "rpm";
+        if (/\.exe$/i.test(name)) return "Installer";
+        if (/\.dmg$/i.test(name)) return "dmg";
+        if (/\.app\.tar\.gz$/i.test(name)) return "app.tar.gz";
+        return "file";
+      }
+
+      function renderDownloads(release) {
+        const groups = classifyAssets(release.assets || []);
+        const empty = Object.values(groups).every((g) => g.items.length === 0);
+        if (empty) {
+          downloadGrid.innerHTML = `
+            <div class="dl-card">
+              <h3>No assets on the latest release</h3>
+              <p>See the <a href="https://github.com/${REPO}/releases" target="_blank" rel="noopener">full releases page</a>.</p>
+            </div>`;
+          return;
+        }
+        downloadGrid.innerHTML = Object.entries(groups)
+          .map(([platform, g]) => {
+            if (g.items.length === 0) {
+              return `
+                <div class="dl-card">
+                  <h3>${platform}</h3>
+                  <p>${g.sub}</p>
+                  <div class="dl-links">
+                    <span class="dl-chip" style="opacity:.6">Not available in ${release.tag_name}</span>
+                  </div>
+                </div>`;
+            }
+            const chips = g.items
+              .map(
+                (a) => `
+                <a class="dl-chip" href="${a.browser_download_url}">
+                  <span>${formatKindLabel(a.name)}</span>
+                  <span style="opacity:.7">·</span>
+                  <span>${formatArchLabel(a.name)}</span>
+                </a>`,
+              )
+              .join("");
+            return `
+              <div class="dl-card">
+                <h3>${platform}</h3>
+                <p>${g.sub}</p>
+                <div class="dl-links">${chips}</div>
+              </div>`;
+          })
+          .join("");
+      }
+
+      function renderReleases(releases) {
+        if (!releases.length) {
+          list.innerHTML = `<div class="error-state">No releases published yet.</div>`;
+          return;
+        }
+        marked.setOptions({ breaks: true, gfm: true });
+        list.innerHTML = releases
+          .map((r, i) => {
+            const date = new Date(r.published_at || r.created_at);
+            const isLatest = i === 0 && !r.prerelease && !r.draft;
+            const badge = isLatest
+              ? `<span class="badge badge-latest">Latest</span>`
+              : r.prerelease
+                ? `<span class="badge badge-pre">Pre-release</span>`
+                : "";
+            const body = r.body
+              ? marked.parse(r.body)
+              : `<p style="color:var(--md-sys-color-on-surface-variant)">No release notes provided.</p>`;
+            return `
+              <article class="release ${isLatest ? "latest" : ""}" id="${r.tag_name}">
+                <header class="release-head">
+                  <a class="release-tag" href="${r.html_url}" target="_blank" rel="noopener">${r.name || r.tag_name}</a>
+                  ${badge}
+                  <span class="release-meta">${date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</span>
+                </header>
+                <div class="release-body">${body}</div>
+              </article>`;
+          })
+          .join("");
+      }
+
+      let allReleases = [];
+      let shownCount = 3;
+
+      function renderVisible() {
+        renderReleases(allReleases.slice(0, shownCount));
+        loadMoreBtn.style.display =
+          shownCount < allReleases.length ? "inline-flex" : "none";
+      }
+
+      loadMoreBtn.addEventListener("click", () => {
+        shownCount = allReleases.length;
+        renderVisible();
+      });
+
+      (async function init() {
+        try {
+          const res = await fetch(API + "?per_page=20", {
+            headers: { Accept: "application/vnd.github+json" },
+          });
+          if (!res.ok) throw new Error("GitHub API " + res.status);
+          const releases = (await res.json()).filter((r) => !r.draft);
+          if (!releases.length) {
+            heroVersion.textContent = "No releases yet";
+            list.innerHTML = `<div class="error-state">No public releases on GitHub yet.</div>`;
+            downloadGrid.innerHTML = "";
+            return;
+          }
+          allReleases = releases;
+          const latest =
+            releases.find((r) => !r.prerelease && !r.draft) || releases[0];
+          heroVersion.textContent = `Latest release · ${latest.tag_name}`;
+          document
+            .getElementById("cta-download")
+            .setAttribute("href", "#downloads");
+          renderDownloads(latest);
+          renderVisible();
+        } catch (e) {
+          heroVersion.textContent = "GitHub unreachable";
+          list.innerHTML = `
+            <div class="error-state">
+              <strong>Couldn't load releases.</strong>
+              <div style="margin-top:8px">${String(e)}</div>
+              <div style="margin-top:12px">
+                <a class="btn btn-outlined" href="https://github.com/${REPO}/releases" target="_blank" rel="noopener">Open on GitHub</a>
+              </div>
+            </div>`;
+          downloadGrid.innerHTML = `
+            <div class="dl-card">
+              <h3>Couldn't fetch builds</h3>
+              <p>Open the <a href="https://github.com/${REPO}/releases" target="_blank" rel="noopener">releases page</a> directly.</p>
+            </div>`;
+        }
+      })();
+    </script>
+  </body>
+</html>

@@ -55,6 +55,9 @@
   --color-text-stroke: var(--md-sys-color-surface);
   --color-mid-gray: var(--md-sys-color-on-surface-variant);
 
+  /* Escribbo logo ink — follows theme (black in light, white in dark) via on-surface. */
+  --escribbo-logo: var(--md-sys-color-on-surface);
+
   /* ------ Shape scale (M3) ------ */
   --radius-xs: 4px;
   --radius-sm: 8px;

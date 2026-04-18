@@ -8,6 +8,7 @@ import { Button } from "../../ui/Button";
 import { AppDataDirectory } from "../AppDataDirectory";
 import { AppLanguageSelector } from "../AppLanguageSelector";
 import { LogDirectory } from "../debug";
+import EscribboTextLogo from "../../icons/EscribboTextLogo";
 
 export const AboutSettings: React.FC = () => {
   const { t } = useTranslation();
@@ -37,6 +38,9 @@ export const AboutSettings: React.FC = () => {
 
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
+      <div className="flex justify-center pb-2" aria-hidden="true">
+        <EscribboTextLogo height={44} />
+      </div>
       <SettingsGroup title={t("settings.about.title")}>
         <AppLanguageSelector descriptionMode="tooltip" grouped={true} />
         <SettingContainer
