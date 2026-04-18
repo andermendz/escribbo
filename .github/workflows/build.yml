@@ -44,8 +44,9 @@ on:
         type: boolean
         default: false
 
+# trusted-signing-cli crate on crates.io — NOT the Escribbo app version (see crates.io/crates/trusted-signing-cli).
 env:
-  TSC_VERSION: "0.9.1"
+  TSC_VERSION: "0.9.0"
 
 jobs:
   build:
