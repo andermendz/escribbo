@@ -320,8 +320,10 @@ Escribbo ships via GitHub Releases. Only the **Release** workflow produces an
 **updateable** build: it signs every installer with the minisign key and
 generates the `latest.json` manifest that the in-app updater points at
 (`plugins.updater.endpoints` in [`src-tauri/tauri.conf.json`](src-tauri/tauri.conf.json)).
-Running `gh release create` by hand, or attaching artifacts from **Main Branch
-Build**, will **not** work — those builds are unsigned and have no manifest.
+Uploading installers **only** from **Main Branch Build** (or attaching
+unsigned files to a release yourself) will **not** produce an updateable
+release — those builds lack `latest.json` and per-file `.sig` signatures.
+Use the **Release** workflow against a draft release as below.
 
 ### 1. Bump the version
 
@@ -342,37 +344,43 @@ git push origin main
 > Do **not** touch `TSC_VERSION` in `.github/workflows/build.yml`. That is the
 > crates.io version of `trusted-signing-cli`, unrelated to the app version.
 
-### 2. Trigger the Release workflow
+### 2. Create a draft release, then run **Release**
 
-The workflow is manual (`workflow_dispatch`). It creates a **draft** release
-named `v<version>`, then runs the Tauri build matrix which signs and uploads
-installers plus `latest.json` to that draft.
-
-Using the GitHub CLI (recommended):
+The workflow builds against an **existing** GitHub release (tag + draft). It
+does not create that release for you.
 
 ```bash
-# From the repo root
-gh workflow run "Release" --ref main
-gh run watch               # follow the latest run until it finishes
+gh release create "vX.Y.Z" --draft --title "vX.Y.Z" --generate-notes --target main
 ```
 
-Or in the browser: **Actions → Release → Run workflow → main**.
-
-### 3. Publish the draft
-
-When every matrix job is green and the draft has `latest.json` plus `.sig`
-files next to each installer, publish it:
+That may start **Release** automatically (`release: created`). If nothing
+appears under **Actions** within a minute, start it yourself. You **must** pass
+the tag — `gh workflow run "Release" --ref main` alone fails with
+`workflow_dispatch requires the tag input`:
 
 ```bash
-gh release edit "v<version>" --draft=false --latest
+gh workflow run "Release" --ref main -f tag=vX.Y.Z
+gh run watch
 ```
 
-Or click **Publish release** on the release page.
+Or **Actions → Release → Run workflow** and set **tag** to `vX.Y.Z`.
 
-The updater's endpoint is
-`https://github.com/andermendz/escribbo/releases/latest/download/latest.json`,
-so as soon as the release is published as **latest**, existing installs can
-find it via **Settings → Check for updates**.
+### 3. Publish
+
+The **`finalize`** job in **Release** turns the draft into a published release
+when the matrix finishes (unless the run was **cancelled**). You usually do not
+need a manual step.
+
+If the release stays a draft, run:
+
+```bash
+gh release edit "vX.Y.Z" --draft=false --latest
+```
+
+The updater uses
+`https://github.com/andermendz/escribbo/releases/latest/download/latest.json`;
+once this version is the **latest** published release, **Check for updates**
+works.
 
 ### Troubleshooting
 
@@ -385,6 +393,10 @@ find it via **Settings → Check for updates**.
 - **Wrong version appears in the draft.** The workflow reads the version from
   `src-tauri/tauri.conf.json`. Bump all three version files and push before
   running it.
+- **`workflow_dispatch requires the tag input`.** Create the draft release
+  first, then run **Release** with `-f tag=vX.Y.Z` (or fill **tag** in the UI).
+- **`gh release edit` says release not found.** The tag/release was deleted or
+  never created; create the draft again with `gh release create … --draft`.
 
 ## Verifying Release Signatures
 
