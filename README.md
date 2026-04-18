@@ -322,7 +322,7 @@ To verify a release manually, set `ARTIFACT` to the filename you downloaded, sav
 
 ```bash
 # Replace with the file you downloaded
-ARTIFACT="Escribbo_0.9.1_amd64.AppImage"
+ARTIFACT="Escribbo_0.9.2_amd64.AppImage"
 
 python3 - "$ARTIFACT" <<'PY'
 import base64, pathlib, sys
