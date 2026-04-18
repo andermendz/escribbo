@@ -1,78 +1,66 @@
 name: "Release"
 
+# Triggers:
+# - `release: published` → GitHub release (draft turned published, or created
+#   non-draft) kicks off the cross-platform build and attaches installers to
+#   that release.
+# - `workflow_dispatch` → manual run against an existing tag, useful for
+#   retrying a release or for a tag where the workflow didn't fire (e.g. a
+#   release created before this workflow existed).
 on:
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
-      upload_to_existing_tag:
-        description: "If set (e.g. v0.9.2), upload build assets to that release instead of creating a new draft"
+      tag:
+        description: "Existing release tag to build for (e.g. v0.9.2). Leave blank to use the release that triggered the workflow."
         required: false
-        default: ""
-        type: string
-      git_ref:
-        description: "Optional ref to build (e.g. refs/tags/v0.9.2). Default is the branch that runs the workflow."
-        required: false
-        default: ""
         type: string
 
 jobs:
-  prepare-release:
+  resolve-release:
     permissions:
       contents: write
     runs-on: ubuntu-latest
     outputs:
-      release-id: ${{ steps.resolve-release.outputs.result }}
-      version: ${{ steps.get-version.outputs.version }}
+      release-id: ${{ steps.resolve.outputs.release-id }}
+      tag: ${{ steps.resolve.outputs.tag }}
+      version: ${{ steps.resolve.outputs.version }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.inputs.git_ref != '' && github.event.inputs.git_ref || github.ref }}
-
-      - name: Get version from tauri.conf.json
-        id: get-version
-        shell: bash
-        run: |
-          VERSION=$(grep -o '"version": "[^"]*"' src-tauri/tauri.conf.json | cut -d'"' -f4)
-          echo "Application version from tauri.conf.json: $VERSION"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Use existing release or create draft
-        id: resolve-release
+      - name: Resolve release id / tag
+        id: resolve
         uses: actions/github-script@v7
         with:
           script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const version = "${{ steps.get-version.outputs.version }}";
-            const existingTag = `${{ github.event.inputs.upload_to_existing_tag }}`.trim();
+            let releaseId, tag;
 
-            if (existingTag) {
+            if (context.eventName === 'release') {
+              releaseId = context.payload.release.id;
+              tag = context.payload.release.tag_name;
+            } else {
+              tag = (context.payload.inputs && context.payload.inputs.tag || '').trim();
+              if (!tag) {
+                core.setFailed("workflow_dispatch requires the `tag` input when not triggered by a release event.");
+                return;
+              }
               const { data } = await github.rest.repos.getReleaseByTag({
-                owner,
-                repo,
-                tag: existingTag,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag,
               });
-              core.info(`Uploading assets to existing release ${existingTag} (id=${data.id})`);
-              return data.id;
+              releaseId = data.id;
             }
 
-            const { data } = await github.rest.repos.createRelease({
-              owner,
-              repo,
-              tag_name: `v${version}`,
-              name: `v${version}`,
-              draft: true,
-              prerelease: false,
-              generate_release_notes: true,
-            });
-            core.info(`Created draft release v${version} (id=${data.id})`);
-            return data.id;
+            const version = tag.replace(/^v/, '');
+            core.setOutput('release-id', String(releaseId));
+            core.setOutput('tag', tag);
+            core.setOutput('version', version);
+            core.info(`Building for release ${tag} (id=${releaseId})`);
 
   publish-tauri:
     permissions:
       contents: write
-    needs: prepare-release
+    needs: resolve-release
     strategy:
       fail-fast: false
       matrix:
@@ -107,6 +95,5 @@ jobs:
       sign-binaries: true
       asset-prefix: "escribbo"
       upload-artifacts: false
-      release-id: ${{ needs.prepare-release.outputs.release-id }}
-      ref: ${{ github.event.inputs.git_ref != '' && github.event.inputs.git_ref || github.ref }}
+      release-id: ${{ needs.resolve-release.outputs.release-id }}
     secrets: inherit
