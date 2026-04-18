@@ -1,6 +1,6 @@
 [package]
 name = "escribbo"
-version = "0.9.3"
+version = "0.9.4"
 description = "Escribbo"
 authors = ["andermendz"]
 edition = "2021"
