@@ -1,24 +1,33 @@
 name: "Release"
 
+# Draft-first: the GitHub release stays a draft until every platform build
+# succeeds and uploads assets. A final job then publishes it.
+#
 # Triggers:
-# - `release: published` → GitHub release (draft turned published, or created
-#   non-draft) kicks off the cross-platform build and attaches installers to
-#   that release.
-# - `workflow_dispatch` → manual run against an existing tag, useful for
-#   retrying a release or for a tag where the workflow didn't fire (e.g. a
-#   release created before this workflow existed).
+# - `release: created` on a **draft** release (e.g. `gh release create v0.9.3
+#   --draft --generate-notes` after the tag exists).
+# - `workflow_dispatch` with `tag` (e.g. v0.9.3): finds that draft release or
+#   creates one, then builds and publishes.
+#
+# Skips cleanly when a release is created already published (non-draft): no
+# duplicate builds when you used to publish immediately.
 on:
   release:
-    types: [published]
+    types: [created]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing release tag to build for (e.g. v0.9.2). Leave blank to use the release that triggered the workflow."
-        required: false
+        description: "Release tag (e.g. v0.9.3). Tag must exist on the remote. Creates a draft release if none exists."
+        required: true
         type: string
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.event.release.tag_name }}
+  cancel-in-progress: false
 
 jobs:
   resolve-release:
+    if: github.event_name == 'workflow_dispatch' || github.event.release.draft
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -27,35 +36,60 @@ jobs:
       tag: ${{ steps.resolve.outputs.tag }}
       version: ${{ steps.resolve.outputs.version }}
     steps:
-      - name: Resolve release id / tag
+      - name: Resolve or create draft release
         id: resolve
         uses: actions/github-script@v7
         with:
           script: |
-            let releaseId, tag;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            let releaseId;
+            let tag;
 
-            if (context.eventName === 'release') {
-              releaseId = context.payload.release.id;
-              tag = context.payload.release.tag_name;
-            } else {
-              tag = (context.payload.inputs && context.payload.inputs.tag || '').trim();
+            if (context.eventName === 'workflow_dispatch') {
+              tag = (context.payload.inputs.tag || '').trim();
               if (!tag) {
-                core.setFailed("workflow_dispatch requires the `tag` input when not triggered by a release event.");
+                core.setFailed('`tag` is required for workflow_dispatch.');
                 return;
               }
-              const { data } = await github.rest.repos.getReleaseByTag({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                tag,
-              });
+              let data;
+              try {
+                ({ data } = await github.rest.repos.getReleaseByTag({ owner, repo, tag }));
+              } catch (e) {
+                if (e.status !== 404) throw e;
+                core.info(`No release for ${tag}; creating draft…`);
+                ({ data } = await github.rest.repos.createRelease({
+                  owner,
+                  repo,
+                  tag_name: tag,
+                  name: tag,
+                  draft: true,
+                  prerelease: false,
+                  generate_release_notes: true,
+                }));
+              }
+              if (!data.draft) {
+                core.setFailed(
+                  `Release ${tag} is already published. Delete it or use a new tag; this workflow only finishes draft releases.`,
+                );
+                return;
+              }
               releaseId = data.id;
+            } else {
+              const rel = context.payload.release;
+              releaseId = rel.id;
+              tag = rel.tag_name;
+              if (!rel.draft) {
+                core.setFailed('Expected a draft release; this should not run.');
+                return;
+              }
             }
 
             const version = tag.replace(/^v/, '');
             core.setOutput('release-id', String(releaseId));
             core.setOutput('tag', tag);
             core.setOutput('version', version);
-            core.info(`Building for release ${tag} (id=${releaseId})`);
+            core.info(`Building for draft release ${tag} (id=${releaseId})`);
 
   publish-tauri:
     permissions:
@@ -97,3 +131,24 @@ jobs:
       upload-artifacts: false
       release-id: ${{ needs.resolve-release.outputs.release-id }}
     secrets: inherit
+
+  finalize-release:
+    name: Publish release (remove draft)
+    needs: [resolve-release, publish-tauri]
+    if: success()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Mark release as latest (public)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const release_id = parseInt('${{ needs.resolve-release.outputs.release-id }}', 10);
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id,
+              draft: false,
+            });
+            core.info(`Release ${{ needs.resolve-release.outputs.tag }} is now public.`);
