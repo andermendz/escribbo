@@ -314,6 +314,78 @@ Exec=env HANDY_NO_GTK_LAYER_SHELL=1 Escribbo
 
 If a workaround helps, please [open an issue](https://github.com/andermendz/escribbo/issues) with your distro, desktop environment, and session type — it helps narrow down the bug.
 
+## Releasing a New Version
+
+Escribbo ships via GitHub Releases. Only the **Release** workflow produces an
+**updateable** build: it signs every installer with the minisign key and
+generates the `latest.json` manifest that the in-app updater points at
+(`plugins.updater.endpoints` in [`src-tauri/tauri.conf.json`](src-tauri/tauri.conf.json)).
+Running `gh release create` by hand, or attaching artifacts from **Main Branch
+Build**, will **not** work — those builds are unsigned and have no manifest.
+
+### 1. Bump the version
+
+Update the patch/minor/major number in all three files so they stay in sync:
+
+- `package.json` → `"version"`
+- `src-tauri/Cargo.toml` → `version`
+- `src-tauri/tauri.conf.json` → `"version"`
+
+Commit as a single change, for example:
+
+```bash
+git add package.json src-tauri/Cargo.toml src-tauri/tauri.conf.json
+git commit -m "chore(release): vX.Y.Z"
+git push origin main
+```
+
+> Do **not** touch `TSC_VERSION` in `.github/workflows/build.yml`. That is the
+> crates.io version of `trusted-signing-cli`, unrelated to the app version.
+
+### 2. Trigger the Release workflow
+
+The workflow is manual (`workflow_dispatch`). It creates a **draft** release
+named `v<version>`, then runs the Tauri build matrix which signs and uploads
+installers plus `latest.json` to that draft.
+
+Using the GitHub CLI (recommended):
+
+```bash
+# From the repo root
+gh workflow run "Release" --ref main
+gh run watch               # follow the latest run until it finishes
+```
+
+Or in the browser: **Actions → Release → Run workflow → main**.
+
+### 3. Publish the draft
+
+When every matrix job is green and the draft has `latest.json` plus `.sig`
+files next to each installer, publish it:
+
+```bash
+gh release edit "v<version>" --draft=false --latest
+```
+
+Or click **Publish release** on the release page.
+
+The updater's endpoint is
+`https://github.com/andermendz/escribbo/releases/latest/download/latest.json`,
+so as soon as the release is published as **latest**, existing installs can
+find it via **Settings → Check for updates**.
+
+### Troubleshooting
+
+- **In-app check does nothing.** The release is probably missing
+  `latest.json` or per-installer `.sig` files. Those are only created by the
+  Release workflow — re-run it, don't upload installers by hand.
+- **Only some installers ship.** If a matrix job failed (e.g. macOS),
+  re-run just that job; it will add the missing `.dmg` + `.sig` to the same
+  draft.
+- **Wrong version appears in the draft.** The workflow reads the version from
+  `src-tauri/tauri.conf.json`. Bump all three version files and push before
+  running it.
+
 ## Verifying Release Signatures
 
 Escribbo release artifacts are signed with Tauri's updater signature format. The public key is in [`src-tauri/tauri.conf.json`](src-tauri/tauri.conf.json) under `plugins.updater.pubkey`.
@@ -322,7 +394,7 @@ To verify a release manually, set `ARTIFACT` to the filename you downloaded, sav
 
 ```bash
 # Replace with the file you downloaded
-ARTIFACT="Escribbo_0.9.3_amd64.AppImage"
+ARTIFACT="Escribbo_0.9.2_amd64.AppImage"
 
 python3 - "$ARTIFACT" <<'PY'
 import base64, pathlib, sys
@@ -348,86 +420,6 @@ Signature and comment signature verified
 ```
 
 Do not use `gpg` — these are not GPG signatures.
-
-## Releasing
-
-Releases are produced by the **Release** workflow
-([`.github/workflows/release.yml`](.github/workflows/release.yml)), which is
-wired so that creating a GitHub release is the only manual step — builds run
-automatically, installers are attached to the release, and the release is
-flipped from draft to public once the matrix finishes.
-
-### 1. Bump the version
-
-Update these five spots to the same semver (e.g. `0.9.3`):
-
-- `package.json` → `"version"`
-- `src-tauri/tauri.conf.json` → `"version"`
-- `src-tauri/Cargo.toml` → `[package] version`
-- `src-tauri/Cargo.lock` (run `cargo check` inside `src-tauri/` to refresh it)
-- `README.md` → `ARTIFACT="Escribbo_…_amd64.AppImage"` example in
-  [Verifying Release Signatures](#verifying-release-signatures)
-
-Do **not** touch `TSC_VERSION` in `.github/workflows/build.yml` — that pins the
-`trusted-signing-cli` crate, not the app.
-
-Commit and push to `main`:
-
-```bash
-git commit -am "chore(release): vX.Y.Z"
-git push origin main
-```
-
-### 2. Create a draft release
-
-```bash
-gh release create vX.Y.Z --draft --generate-notes
-```
-
-(Or in the GitHub UI: **Releases → Draft a new release → Save draft**.)
-
-### 3. Builds run automatically
-
-The `release.created` event triggers `.github/workflows/release.yml`, which
-runs the cross-platform matrix via `tauri-action` and uploads the installers
-directly to the draft:
-
-- macOS (`aarch64`, `x86_64`) → `.dmg`
-- Linux (`x86_64`, `aarch64`) → `.AppImage`, `.deb`, `.rpm`
-- Windows (`x86_64`, `aarch64`) → `.msi`, `.exe` (NSIS)
-
-Watch progress at
-[github.com/andermendz/escribbo/actions](https://github.com/andermendz/escribbo/actions/workflows/release.yml).
-
-### 4. Auto-publish
-
-When the matrix finishes, the `finalize` job flips the release from draft to
-public — even if one platform failed (e.g. a macOS signing flake). A cancelled
-run leaves the release as a draft so you can retry without overwriting notes.
-
-### Retrying a release
-
-If something transient fails, re-dispatch the workflow against the existing
-tag:
-
-```bash
-gh workflow run release.yml -f tag=vX.Y.Z
-```
-
-This also works for drafts (the workflow looks up releases via
-`listReleases`, not `getReleaseByTag`, so it finds drafts too).
-
-### Icons (when the mark changes)
-
-If the app icon changes, regenerate platform assets from the single source:
-
-```bash
-bun run tauri icon src-tauri/icons/icon.svg
-```
-
-That command resets `src-tauri/icons/android/values/ic_launcher_background.xml`
-to white; re-apply the dark plate afterwards so the white foreground stays
-visible on Android adaptive icons.
 
 ## Contributing
 
