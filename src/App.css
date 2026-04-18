@@ -1,46 +1,104 @@
 @import "tailwindcss";
 
+/*
+ * Material 3 (“Material You”) design tokens.
+ *
+ * The `--md-sys-color-*` custom properties themselves are written at runtime
+ * by `applyMaterialTheme()` (src/lib/utils/materialTheme.ts) from the user's
+ * seed color. Tailwind v4 `@theme` just aliases them into utility classes so
+ * components can keep using `bg-surface`, `text-on-surface`, etc.
+ */
 @theme {
-  /* Design tokens - Escribbo indigo palette */
-  --color-text: #0f172a;
-  --color-background: #fbfbfb;
-  --color-background-ui: #4f46e5;
-  --color-logo-primary: #6366f1;
-  --color-logo-stroke: #312e81;
-  --color-text-stroke: #f6f6f6;
-  --color-mid-gray: #64748b;
+  /* ------ Color roles ------ */
+  --color-primary: var(--md-sys-color-primary);
+  --color-on-primary: var(--md-sys-color-on-primary);
+  --color-primary-container: var(--md-sys-color-primary-container);
+  --color-on-primary-container: var(--md-sys-color-on-primary-container);
+
+  --color-secondary: var(--md-sys-color-secondary);
+  --color-on-secondary: var(--md-sys-color-on-secondary);
+  --color-secondary-container: var(--md-sys-color-secondary-container);
+  --color-on-secondary-container: var(--md-sys-color-on-secondary-container);
+
+  --color-tertiary: var(--md-sys-color-tertiary);
+  --color-on-tertiary: var(--md-sys-color-on-tertiary);
+  --color-tertiary-container: var(--md-sys-color-tertiary-container);
+  --color-on-tertiary-container: var(--md-sys-color-on-tertiary-container);
+
+  --color-error: var(--md-sys-color-error);
+  --color-on-error: var(--md-sys-color-on-error);
+  --color-error-container: var(--md-sys-color-error-container);
+  --color-on-error-container: var(--md-sys-color-on-error-container);
+
+  --color-background: var(--md-sys-color-background);
+  --color-on-background: var(--md-sys-color-on-background);
+  --color-surface: var(--md-sys-color-surface);
+  --color-on-surface: var(--md-sys-color-on-surface);
+  --color-surface-variant: var(--md-sys-color-surface-variant);
+  --color-on-surface-variant: var(--md-sys-color-on-surface-variant);
+
+  --color-outline: var(--md-sys-color-outline);
+  --color-outline-variant: var(--md-sys-color-outline-variant);
+
+  --color-inverse-surface: var(--md-sys-color-inverse-surface);
+  --color-inverse-on-surface: var(--md-sys-color-inverse-on-surface);
+  --color-inverse-primary: var(--md-sys-color-inverse-primary);
+
+  --color-scrim: var(--md-sys-color-scrim);
+  --color-shadow: var(--md-sys-color-shadow);
+
+  /* Back-compat aliases used by older code paths. */
+  --color-text: var(--md-sys-color-on-surface);
+  --color-background-ui: var(--md-sys-color-primary);
+  --color-logo-primary: var(--md-sys-color-primary);
+  --color-logo-stroke: var(--md-sys-color-on-primary);
+  --color-text-stroke: var(--md-sys-color-surface);
+  --color-mid-gray: var(--md-sys-color-on-surface-variant);
+
+  /* ------ Shape scale (M3) ------ */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 28px;
+  --radius-full: 9999px;
+
+  /* ------ Elevation tiers (approximate M3 shadows) ------ */
+  --shadow-e0: none;
+  --shadow-e1: 0 1px 2px 0 rgb(0 0 0 / 0.3), 0 1px 3px 1px rgb(0 0 0 / 0.15);
+  --shadow-e2: 0 1px 2px 0 rgb(0 0 0 / 0.3), 0 2px 6px 2px rgb(0 0 0 / 0.15);
+  --shadow-e3: 0 4px 8px 3px rgb(0 0 0 / 0.15), 0 1px 3px 0 rgb(0 0 0 / 0.3);
+  --shadow-e4: 0 6px 10px 4px rgb(0 0 0 / 0.15), 0 2px 3px 0 rgb(0 0 0 / 0.3);
+  --shadow-e5: 0 8px 12px 6px rgb(0 0 0 / 0.15), 0 4px 4px 0 rgb(0 0 0 / 0.3);
 }
 
 :root {
   /* Typography */
   font-size: 15px;
-  line-height: 24px;
+  line-height: 1.5;
   font-weight: 400;
-
-  /* Colors - Light Theme */
-  /* --color-text: #0f0f0f;
-  --color-background: #fbfbfb;
-  --color-logo-primary: #FAA2CA;
-  --color-logo-stroke: #382731;
-  --color-text-stroke: #f6f6f6; */
-
-  /* Typography settings */
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
 
-  --scrollbar-thumb: color-mix(in srgb, var(--color-text), transparent 85%);
+  --scrollbar-thumb: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface),
+    transparent 85%
+  );
   --scrollbar-thumb-hover: color-mix(
     in srgb,
-    var(--color-text),
+    var(--md-sys-color-on-surface),
     transparent 70%
   );
 
-  /* Apply colors */
-  color: var(--color-text);
-  background-color: var(--color-background);
+  color: var(--md-sys-color-on-surface);
+  background-color: var(--md-sys-color-background);
 }
 
 .container {
@@ -50,30 +108,6 @@
   flex-direction: column;
   justify-content: center;
   text-align: center;
-}
-
-/* Dark theme — applied either via manual override [data-theme="dark"]
-   or by system preference when [data-theme="system"] / unset. */
-:root[data-theme="dark"] {
-  --color-text: #f1f5f9;
-  --color-background: #0f172a;
-  --color-background-ui: #6366f1;
-  --color-logo-primary: #818cf8;
-  --color-logo-stroke: #c7d2fe;
-  --color-text-stroke: #1e293b;
-  --color-mid-gray: #94a3b8;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --color-text: #f1f5f9;
-    --color-background: #0f172a;
-    --color-background-ui: #6366f1;
-    --color-logo-primary: #818cf8;
-    --color-logo-stroke: #c7d2fe;
-    --color-text-stroke: #1e293b;
-    --color-mid-gray: #94a3b8;
-  }
 }
 
 /* macOS - tint native overlay scrollbar thumb */
@@ -107,16 +141,42 @@
 
 @layer utilities {
   .text-stroke {
-    -webkit-text-stroke: 2px var(--color-text-stroke);
+    -webkit-text-stroke: 2px var(--md-sys-color-surface);
+  }
+
+  /* State-layer helper: add `.state-layer` to any interactive element and
+     the ::after overlay will fade in on hover/focus/active per M3 spec. */
+  .state-layer {
+    position: relative;
+    isolation: isolate;
+  }
+  .state-layer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: currentColor;
+    opacity: 0;
+    border-radius: inherit;
+    transition: opacity 120ms ease-out;
+  }
+  .state-layer:hover::after {
+    opacity: 0.08;
+  }
+  .state-layer:focus-visible::after {
+    opacity: 0.12;
+  }
+  .state-layer:active::after {
+    opacity: 0.12;
   }
 }
 
 .logo-primary {
-  fill: var(--color-logo-primary);
+  fill: var(--md-sys-color-primary);
 }
 
 .logo-stroke {
-  fill: var(--color-logo-stroke);
-  stroke: var(--color-logo-stroke);
+  fill: var(--md-sys-color-on-primary);
+  stroke: var(--md-sys-color-on-primary);
   stroke-width: 1;
 }

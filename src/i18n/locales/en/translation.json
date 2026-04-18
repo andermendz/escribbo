@@ -202,6 +202,21 @@
         "system": "System",
         "light": "Light",
         "dark": "Dark"
+      },
+      "seedColor": {
+        "title": "Accent color",
+        "description": "Pick a seed color. Escribbo generates the full Material You palette from it.",
+        "pickerLabel": "Choose a custom seed color",
+        "presets": {
+          "indigo": "Indigo",
+          "sky": "Sky",
+          "emerald": "Emerald",
+          "amber": "Amber",
+          "red": "Red",
+          "pink": "Pink",
+          "violet": "Violet",
+          "slate": "Slate"
+        }
       }
     },
     "models": {
@@ -294,12 +309,24 @@
         "description": "Display visual feedback overlay during recording and transcription. On Linux 'None' is recommended.",
         "options": {
           "none": "None",
-          "bottom": "Bottom",
-          "top": "Top"
+          "bottom": "Bottom Center",
+          "bottom_left": "Bottom Left",
+          "bottom_right": "Bottom Right",
+          "top": "Top Center",
+          "top_left": "Top Left",
+          "top_right": "Top Right"
         },
         "offset": {
-          "title": "Overlay Offset",
-          "description": "Fine-tune the distance between the overlay and the anchored screen edge. Increase if the overlay overlaps the taskbar or menu bar."
+          "title": "Vertical Offset",
+          "description": "Fine-tune the vertical distance between the overlay and the anchored screen edge. Increase to push away from the taskbar or menu bar."
+        },
+        "offsetX": {
+          "title": "Horizontal Offset",
+          "description": "Fine-tune the horizontal position. For left/right positions, higher values push inward from the edge. For center, positive values shift right."
+        },
+        "scale": {
+          "title": "Overlay Size",
+          "description": "Scale the recording overlay up or down. 100% is the default size."
         }
       },
       "pasteMethod": {

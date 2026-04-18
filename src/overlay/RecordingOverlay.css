@@ -1,62 +1,95 @@
+/*
+ * Material 3 recording overlay: surface-container-high bottom sheet with
+ * primary accents. Uses the same `--md-sys-color-*` tokens driven by the
+ * main app, so it follows the user's seed color automatically.
+ *
+ * The Rust side creates the window at 172x36 logical pixels; the root
+ * element must fill that box exactly. Earlier we hardcoded 176x40 which
+ * caused the overlay to appear clipped.
+ */
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+  /* Match the main app's font stack so overlay text is visually consistent. */
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--md-sys-color-on-surface);
+}
+
 .recording-overlay {
-  height: 36px;
-  width: 172px;
+  width: 100%;
+  height: 100%;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  padding: 6px;
-  background: #000000cc;
+  padding: 4px 8px;
+  gap: 8px;
+  /* Use the base `surface` + `on-surface` roles (the legacy M2 scheme our
+     color-utilities build emits) so the overlay follows the app theme
+     (dark app → dark pill, light app → light pill) instead of inverting
+     or falling through to a hardcoded fallback. */
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: 18px;
+  box-shadow:
+    0 4px 8px 3px rgb(0 0 0 / 0.15),
+    0 1px 3px 0 rgb(0 0 0 / 0.3);
   opacity: 0;
   transition:
     opacity 300ms ease-out,
-    background-color 200ms ease-out;
+    background-color 200ms ease-out,
+    color 200ms ease-out;
   box-sizing: border-box;
 }
 
-[data-theme="light"] .recording-overlay {
-  background: #ffffffeb;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
-}
-
-.overlay-left {
-  display: flex;
-  align-items: center;
-}
-
-.overlay-middle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
+.overlay-left,
+.overlay-middle,
 .overlay-right {
   display: flex;
   align-items: center;
+  min-width: 0;
+}
+.overlay-left svg,
+.overlay-right svg {
+  width: 18px;
+  height: 18px;
+}
+.overlay-middle {
+  justify-content: center;
+  overflow: hidden;
+}
+.overlay-right {
   justify-content: flex-end;
 }
 
 .bars-container {
   display: flex;
-  align-items: end;
+  align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding-bottom: 0px;
-  height: 24px;
+  gap: 2px;
+  height: 100%;
+  max-height: 22px;
   overflow: hidden;
 }
 
 .bar {
-  width: 6px;
-  background: #c7d2fe;
-  max-height: 20px;
+  width: 4px;
+  background: var(--md-sys-color-primary, #4f46e5);
+  max-height: 18px;
   border-radius: 2px;
   transition: height 80ms linear;
-  min-height: 4px;
-}
-
-[data-theme="light"] .bar {
-  background: #4f46e5;
+  min-height: 3px;
 }
 
 .recording-overlay.fade-in {
@@ -64,15 +97,14 @@
 }
 
 .transcribing-text {
-  color: white;
-  font-size: 12px;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  font-family: inherit;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
   animation: transcribing-pulse 1.5s infinite ease-in-out;
-}
-
-[data-theme="light"] .transcribing-text {
-  color: #1e1b4b;
 }
 
 @keyframes transcribing-pulse {
@@ -86,14 +118,16 @@
 }
 
 .cancel-button {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
   background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  color: inherit;
+  border: none;
   transition:
     background-color 150ms ease-out,
     transform 100ms ease-out;
@@ -101,12 +135,8 @@
 }
 
 .cancel-button:hover {
-  background: #a5b4fc33;
+  background: color-mix(in srgb, currentColor 12%, transparent);
   transform: scale(1.05);
-}
-
-[data-theme="light"] .cancel-button:hover {
-  background: #4f46e526;
 }
 
 .cancel-button:active {

@@ -1,9 +1,14 @@
 import React from "react";
+import MuiSlider from "@mui/material/Slider";
 import { SettingContainer } from "./SettingContainer";
 
 interface SliderProps {
   value: number;
   onChange: (value: number) => void;
+  onCommit?: (value: number) => void;
+  onReset?: () => void;
+  resetValue?: number;
+  resetLabel?: string;
   min: number;
   max: number;
   step?: number;
@@ -19,6 +24,10 @@ interface SliderProps {
 export const Slider: React.FC<SliderProps> = ({
   value,
   onChange,
+  onCommit,
+  onReset,
+  resetValue,
+  resetLabel = "Reset",
   min,
   max,
   step = 0.01,
@@ -30,10 +39,6 @@ export const Slider: React.FC<SliderProps> = ({
   showValue = true,
   formatValue = (v) => v.toFixed(2),
 }) => {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(parseFloat(e.target.value));
-  };
-
   return (
     <SettingContainer
       title={label}
@@ -43,29 +48,51 @@ export const Slider: React.FC<SliderProps> = ({
       layout="horizontal"
       disabled={disabled}
     >
-      <div className="w-full">
-        <div className="flex items-center space-x-1 h-6">
-          <input
-            type="range"
+      <div className="w-full min-w-[180px]">
+        <div className="flex items-center space-x-3 h-8">
+          <MuiSlider
+            value={value}
             min={min}
             max={max}
             step={step}
-            value={value}
-            onChange={handleChange}
             disabled={disabled}
-            className="flex-grow h-2 rounded-lg appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-logo-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              background: `linear-gradient(to right, var(--color-background-ui) ${
-                ((value - min) / (max - min)) * 100
-              }%, rgba(128, 128, 128, 0.2) ${
-                ((value - min) / (max - min)) * 100
-              }%)`,
-            }}
+            onChange={(_, v) => onChange(v as number)}
+            onChangeCommitted={(_, v) => onCommit?.(v as number)}
+            aria-label={label}
+            sx={{ flexGrow: 1 }}
           />
           {showValue && (
-            <span className="text-sm font-medium text-text/90 w-12 text-end">
+            <span className="text-sm font-medium text-on-surface/90 w-12 text-end tabular-nums">
               {formatValue(value)}
             </span>
+          )}
+          {onReset && (
+            <button
+              type="button"
+              onClick={onReset}
+              disabled={
+                disabled ||
+                (resetValue !== undefined && value === resetValue)
+              }
+              title={resetLabel}
+              aria-label={resetLabel}
+              className="flex items-center justify-center w-8 h-8 rounded-full text-on-surface-variant hover:bg-primary/8 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 12a9 9 0 1 0 3-6.7" />
+                <path d="M3 4v5h5" />
+              </svg>
+            </button>
           )}
         </div>
       </div>

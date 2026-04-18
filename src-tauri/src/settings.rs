@@ -107,11 +107,44 @@ pub struct PostProcessProvider {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum OverlayPosition {
     None,
+    /// Top center (legacy name kept for settings backwards-compat).
     Top,
+    /// Bottom center (legacy name kept for settings backwards-compat).
     Bottom,
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+
+impl OverlayPosition {
+    pub fn is_top(&self) -> bool {
+        matches!(
+            self,
+            OverlayPosition::Top | OverlayPosition::TopLeft | OverlayPosition::TopRight
+        )
+    }
+    pub fn is_bottom(&self) -> bool {
+        matches!(
+            self,
+            OverlayPosition::Bottom
+                | OverlayPosition::BottomLeft
+                | OverlayPosition::BottomRight
+                | OverlayPosition::None
+        )
+    }
+    pub fn is_left(&self) -> bool {
+        matches!(self, OverlayPosition::TopLeft | OverlayPosition::BottomLeft)
+    }
+    pub fn is_right(&self) -> bool {
+        matches!(
+            self,
+            OverlayPosition::TopRight | OverlayPosition::BottomRight
+        )
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
@@ -352,6 +385,7 @@ impl std::ops::DerefMut for SecretMap {
 pub struct AppSettings {
     pub bindings: HashMap<String, ShortcutBinding>,
     pub push_to_talk: bool,
+    #[serde(default = "default_audio_feedback")]
     pub audio_feedback: bool,
     #[serde(default = "default_audio_feedback_volume")]
     pub audio_feedback_volume: f32,
@@ -381,6 +415,10 @@ pub struct AppSettings {
     pub overlay_position: OverlayPosition,
     #[serde(default)]
     pub overlay_offset: i32,
+    #[serde(default)]
+    pub overlay_offset_x: i32,
+    #[serde(default = "default_overlay_scale")]
+    pub overlay_scale: f32,
     #[serde(default = "default_debug_mode")]
     pub debug_mode: bool,
     #[serde(default = "default_log_level")]
@@ -478,6 +516,10 @@ fn default_selected_language() -> String {
     "auto".to_string()
 }
 
+fn default_overlay_scale() -> f32 {
+    1.0
+}
+
 fn default_overlay_position() -> OverlayPosition {
     #[cfg(target_os = "linux")]
     return OverlayPosition::None;
@@ -511,6 +553,10 @@ fn default_history_limit() -> usize {
 
 fn default_recording_retention_period() -> RecordingRetentionPeriod {
     RecordingRetentionPeriod::PreserveLimit
+}
+
+fn default_audio_feedback() -> bool {
+    true
 }
 
 fn default_audio_feedback_volume() -> f32 {
@@ -785,7 +831,7 @@ pub fn get_default_settings() -> AppSettings {
     AppSettings {
         bindings,
         push_to_talk: true,
-        audio_feedback: false,
+        audio_feedback: default_audio_feedback(),
         audio_feedback_volume: default_audio_feedback_volume(),
         sound_theme: default_sound_theme(),
         start_hidden: default_start_hidden(),
@@ -800,6 +846,8 @@ pub fn get_default_settings() -> AppSettings {
         selected_language: "auto".to_string(),
         overlay_position: default_overlay_position(),
         overlay_offset: 0,
+        overlay_offset_x: 0,
+        overlay_scale: default_overlay_scale(),
         debug_mode: false,
         log_level: default_log_level(),
         custom_words: Vec::new(),

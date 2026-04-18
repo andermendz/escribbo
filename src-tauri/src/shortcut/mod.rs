@@ -542,6 +542,10 @@ pub fn change_overlay_position_setting(app: AppHandle, position: String) -> Resu
         "none" => OverlayPosition::None,
         "top" => OverlayPosition::Top,
         "bottom" => OverlayPosition::Bottom,
+        "top_left" => OverlayPosition::TopLeft,
+        "top_right" => OverlayPosition::TopRight,
+        "bottom_left" => OverlayPosition::BottomLeft,
+        "bottom_right" => OverlayPosition::BottomRight,
         other => {
             warn!("Invalid overlay position '{}', defaulting to bottom", other);
             OverlayPosition::Bottom
@@ -561,11 +565,77 @@ pub fn change_overlay_position_setting(app: AppHandle, position: String) -> Resu
 pub fn change_overlay_offset_setting(app: AppHandle, offset: i32) -> Result<(), String> {
     let clamped = offset.clamp(-500, 500);
     let mut settings = settings::get_settings(&app);
+    if settings.overlay_offset == clamped {
+        return Ok(());
+    }
     settings.overlay_offset = clamped;
     settings::write_settings(&app, settings);
 
     crate::utils::update_overlay_position(&app);
 
+    Ok(())
+}
+
+/// Moves the overlay window using a transient offset without persisting
+/// settings. Call during slider drag for smooth live preview; commit the
+/// final value via `change_overlay_offset_setting` on release.
+#[tauri::command]
+#[specta::specta]
+pub fn preview_overlay_offset(app: AppHandle, offset: i32) -> Result<(), String> {
+    let clamped = offset.clamp(-500, 500);
+    crate::overlay::preview_overlay_offset(&app, clamped);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_overlay_offset_x_setting(app: AppHandle, offset: i32) -> Result<(), String> {
+    let clamped = offset.clamp(-2000, 2000);
+    let mut settings = settings::get_settings(&app);
+    if settings.overlay_offset_x == clamped {
+        return Ok(());
+    }
+    settings.overlay_offset_x = clamped;
+    settings::write_settings(&app, settings);
+
+    crate::utils::update_overlay_position(&app);
+
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn preview_overlay_offset_x(app: AppHandle, offset: i32) -> Result<(), String> {
+    let clamped = offset.clamp(-2000, 2000);
+    crate::overlay::preview_overlay_offset_x(&app, clamped);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_overlay_scale_setting(app: AppHandle, scale: f32) -> Result<(), String> {
+    let clamped = scale.clamp(
+        crate::overlay::OVERLAY_SCALE_MIN,
+        crate::overlay::OVERLAY_SCALE_MAX,
+    );
+    let mut settings = settings::get_settings(&app);
+    if (settings.overlay_scale - clamped).abs() < f32::EPSILON {
+        return Ok(());
+    }
+    settings.overlay_scale = clamped;
+    settings::write_settings(&app, settings);
+
+    crate::overlay::update_overlay_scale(&app);
+    crate::utils::update_overlay_position(&app);
+
+    Ok(())
+}
+
+/// Live preview for the scale slider; no persistence.
+#[tauri::command]
+#[specta::specta]
+pub fn preview_overlay_scale(app: AppHandle, scale: f32) -> Result<(), String> {
+    crate::overlay::preview_overlay_scale(&app, scale);
     Ok(())
 }
 

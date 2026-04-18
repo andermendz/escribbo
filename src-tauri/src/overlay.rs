@@ -45,23 +45,27 @@ const OVERLAY_BOTTOM_OFFSET: f64 = 15.0;
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 const OVERLAY_BOTTOM_OFFSET: f64 = 40.0;
 
+/// Horizontal padding from the screen edge for left/right-anchored overlays.
+const OVERLAY_SIDE_OFFSET: f64 = 16.0;
+
+pub const OVERLAY_SCALE_MIN: f32 = 0.5;
+pub const OVERLAY_SCALE_MAX: f32 = 2.0;
+
+fn clamp_scale(scale: f32) -> f32 {
+    scale.clamp(OVERLAY_SCALE_MIN, OVERLAY_SCALE_MAX)
+}
+
 #[cfg(target_os = "linux")]
 fn update_gtk_layer_shell_anchors(overlay_window: &tauri::webview::WebviewWindow) {
     let window_clone = overlay_window.clone();
     let _ = overlay_window.run_on_main_thread(move || {
-        // Try to get the GTK window from the Tauri webview
         if let Ok(gtk_window) = window_clone.gtk_window() {
             let settings = settings::get_settings(window_clone.app_handle());
-            match settings.overlay_position {
-                OverlayPosition::Top => {
-                    gtk_window.set_anchor(Edge::Top, true);
-                    gtk_window.set_anchor(Edge::Bottom, false);
-                }
-                OverlayPosition::Bottom | OverlayPosition::None => {
-                    gtk_window.set_anchor(Edge::Bottom, true);
-                    gtk_window.set_anchor(Edge::Top, false);
-                }
-            }
+            let pos = settings.overlay_position;
+            gtk_window.set_anchor(Edge::Top, pos.is_top());
+            gtk_window.set_anchor(Edge::Bottom, pos.is_bottom());
+            gtk_window.set_anchor(Edge::Left, pos.is_left());
+            gtk_window.set_anchor(Edge::Right, pos.is_right());
         }
     });
 }
@@ -201,28 +205,137 @@ fn is_mouse_within_monitor(
 /// converts PhysicalPosition using the scale factor of the monitor the window
 /// is *currently* on, which is wrong when moving cross-monitor.
 fn calculate_overlay_position(app_handle: &AppHandle) -> Option<(f64, f64)> {
+    calculate_overlay_geometry(app_handle, OverlayOverrides::default()).map(|g| (g.x, g.y))
+}
+
+struct OverlayGeometry {
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+}
+
+#[derive(Default, Clone, Copy)]
+struct OverlayOverrides {
+    offset_y: Option<i32>,
+    offset_x: Option<i32>,
+    scale: Option<f32>,
+}
+
+fn calculate_overlay_geometry(
+    app_handle: &AppHandle,
+    overrides: OverlayOverrides,
+) -> Option<OverlayGeometry> {
     let monitor = get_monitor_with_cursor(app_handle)?;
-    let scale = monitor.scale_factor();
-    let monitor_x = monitor.position().x as f64 / scale;
-    let monitor_y = monitor.position().y as f64 / scale;
-    let monitor_width = monitor.size().width as f64 / scale;
-    let monitor_height = monitor.size().height as f64 / scale;
+    let mscale = monitor.scale_factor();
+    let monitor_x = monitor.position().x as f64 / mscale;
+    let monitor_y = monitor.position().y as f64 / mscale;
+    let monitor_width = monitor.size().width as f64 / mscale;
+    let monitor_height = monitor.size().height as f64 / mscale;
 
     let settings = settings::get_settings(app_handle);
+    let user_offset_y = overrides.offset_y.unwrap_or(settings.overlay_offset) as f64;
+    let user_offset_x = overrides.offset_x.unwrap_or(settings.overlay_offset_x) as f64;
+    let ui_scale = clamp_scale(overrides.scale.unwrap_or(settings.overlay_scale)) as f64;
+    let width = OVERLAY_WIDTH * ui_scale;
+    let height = OVERLAY_HEIGHT * ui_scale;
 
-    let x = monitor_x + (monitor_width - OVERLAY_WIDTH) / 2.0;
-    // Positive user_offset pushes the overlay further inward from the anchored
-    // screen edge (useful to avoid covering the Windows taskbar / macOS menu
-    // bar). Negative values move toward the edge.
-    let user_offset = settings.overlay_offset as f64;
-    let y = match settings.overlay_position {
-        OverlayPosition::Top => monitor_y + OVERLAY_TOP_OFFSET + user_offset,
-        OverlayPosition::Bottom | OverlayPosition::None => {
-            monitor_y + monitor_height - OVERLAY_HEIGHT - OVERLAY_BOTTOM_OFFSET - user_offset
-        }
+    let pos = settings.overlay_position;
+    // Positive horizontal offset always pushes the overlay inward from the
+    // anchored edge. For center, it shifts right.
+    let x = if pos.is_left() {
+        monitor_x + OVERLAY_SIDE_OFFSET + user_offset_x
+    } else if pos.is_right() {
+        monitor_x + monitor_width - width - OVERLAY_SIDE_OFFSET - user_offset_x
+    } else {
+        monitor_x + (monitor_width - width) / 2.0 + user_offset_x
     };
 
-    Some((x, y))
+    // Positive vertical offset pushes the overlay further inward from the
+    // anchored screen edge (useful to avoid covering the Windows taskbar /
+    // macOS menu bar). Negative values move toward the edge.
+    let y = if pos.is_top() {
+        monitor_y + OVERLAY_TOP_OFFSET + user_offset_y
+    } else {
+        monitor_y + monitor_height - height - OVERLAY_BOTTOM_OFFSET - user_offset_y
+    };
+
+    Some(OverlayGeometry {
+        x,
+        y,
+        width,
+        height,
+    })
+}
+
+/// Lightweight preview: moves the overlay window using a transient vertical
+/// offset without reading/writing persisted settings.
+pub fn preview_overlay_offset(app_handle: &AppHandle, offset: i32) {
+    if let Some(overlay_window) = app_handle.get_webview_window("recording_overlay") {
+        if let Some(g) = calculate_overlay_geometry(
+            app_handle,
+            OverlayOverrides {
+                offset_y: Some(offset),
+                ..Default::default()
+            },
+        ) {
+            let _ = overlay_window.set_position(tauri::Position::Logical(tauri::LogicalPosition {
+                x: g.x,
+                y: g.y,
+            }));
+        }
+    }
+}
+
+/// Lightweight preview: moves the overlay window using a transient horizontal
+/// offset without reading/writing persisted settings.
+pub fn preview_overlay_offset_x(app_handle: &AppHandle, offset: i32) {
+    if let Some(overlay_window) = app_handle.get_webview_window("recording_overlay") {
+        if let Some(g) = calculate_overlay_geometry(
+            app_handle,
+            OverlayOverrides {
+                offset_x: Some(offset),
+                ..Default::default()
+            },
+        ) {
+            let _ = overlay_window.set_position(tauri::Position::Logical(tauri::LogicalPosition {
+                x: g.x,
+                y: g.y,
+            }));
+        }
+    }
+}
+
+/// Live preview for the scale slider: resizes the overlay window, repositions
+/// it, and emits a zoom event so the webview content matches without touching
+/// persisted settings.
+pub fn preview_overlay_scale(app_handle: &AppHandle, scale: f32) {
+    let clamped = clamp_scale(scale);
+    if let Some(overlay_window) = app_handle.get_webview_window("recording_overlay") {
+        if let Some(g) = calculate_overlay_geometry(
+            app_handle,
+            OverlayOverrides {
+                scale: Some(clamped),
+                ..Default::default()
+            },
+        ) {
+            let _ = overlay_window.set_size(tauri::Size::Logical(tauri::LogicalSize {
+                width: g.width,
+                height: g.height,
+            }));
+            let _ = overlay_window.set_position(tauri::Position::Logical(tauri::LogicalPosition {
+                x: g.x,
+                y: g.y,
+            }));
+            let _ = overlay_window.emit("overlay-scale", clamped);
+        }
+    }
+}
+
+/// Applies the current persisted scale: resizes window + emits zoom event.
+pub fn update_overlay_scale(app_handle: &AppHandle) {
+    let settings = settings::get_settings(app_handle);
+    preview_overlay_scale(app_handle, settings.overlay_scale);
 }
 
 /// Creates the recording overlay window and keeps it hidden by default
@@ -366,9 +479,17 @@ pub fn update_overlay_position(app_handle: &AppHandle) {
             update_gtk_layer_shell_anchors(&overlay_window);
         }
 
-        if let Some((x, y)) = calculate_overlay_position(app_handle) {
-            let _ = overlay_window
-                .set_position(tauri::Position::Logical(tauri::LogicalPosition { x, y }));
+        if let Some(g) = calculate_overlay_geometry(app_handle, OverlayOverrides::default()) {
+            let _ = overlay_window.set_size(tauri::Size::Logical(tauri::LogicalSize {
+                width: g.width,
+                height: g.height,
+            }));
+            let _ = overlay_window.set_position(tauri::Position::Logical(tauri::LogicalPosition {
+                x: g.x,
+                y: g.y,
+            }));
+            let settings = settings::get_settings(app_handle);
+            let _ = overlay_window.emit("overlay-scale", clamp_scale(settings.overlay_scale));
         }
     }
 }

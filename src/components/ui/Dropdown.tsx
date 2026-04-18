@@ -62,17 +62,23 @@ export const Dropdown: React.FC<DropdownProps> = ({
     <div className={`relative ${className}`} ref={dropdownRef}>
       <button
         type="button"
-        className={`px-2 py-1 text-sm font-semibold bg-mid-gray/10 border border-mid-gray/80 rounded-md min-w-[200px] text-start flex items-center justify-between transition-all duration-150 ${
+        className={`h-9 px-3 text-sm font-medium bg-surface border border-outline rounded-lg min-w-[200px] text-start flex items-center justify-between transition-colors ${
           disabled
             ? "opacity-50 cursor-not-allowed"
-            : "hover:bg-logo-primary/10 cursor-pointer hover:border-logo-primary"
+            : "hover:bg-primary/8 cursor-pointer hover:border-primary focus-visible:ring-2 focus-visible:ring-primary/40 focus:outline-none"
         }`}
         onClick={handleToggle}
         disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
       >
-        <span className="truncate">{selectedOption?.label || placeholder}</span>
+        <span className="truncate text-on-surface">
+          {selectedOption?.label || placeholder}
+        </span>
         <svg
-          className={`w-4 h-4 ms-2 transition-transform duration-200 ${isOpen ? "transform rotate-180" : ""}`}
+          className={`w-4 h-4 ms-2 shrink-0 text-on-surface-variant transition-transform duration-200 ${
+            isOpen ? "transform rotate-180" : ""
+          }`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -86,27 +92,35 @@ export const Dropdown: React.FC<DropdownProps> = ({
         </svg>
       </button>
       {isOpen && !disabled && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-mid-gray/80 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+        <div
+          role="listbox"
+          className="absolute top-full left-0 right-0 mt-1 bg-surface border border-outline-variant rounded-lg shadow-e2 z-50 max-h-60 overflow-y-auto py-1"
+        >
           {options.length === 0 ? (
-            <div className="px-2 py-1 text-sm text-mid-gray">
+            <div className="px-3 py-2 text-sm text-on-surface-variant">
               {t("common.noOptionsFound")}
             </div>
           ) : (
-            options.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                className={`w-full px-2 py-1 text-sm text-start hover:bg-logo-primary/10 transition-colors duration-150 ${
-                  selectedValue === option.value
-                    ? "bg-logo-primary/20 font-semibold"
-                    : ""
-                } ${option.disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-                onClick={() => handleSelect(option.value)}
-                disabled={option.disabled}
-              >
-                <span className="truncate">{option.label}</span>
-              </button>
-            ))
+            options.map((option) => {
+              const active = selectedValue === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  className={`w-full px-3 py-2 text-sm text-start hover:bg-primary/8 transition-colors ${
+                    active
+                      ? "bg-secondary-container text-on-secondary-container font-medium"
+                      : "text-on-surface"
+                  } ${option.disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                  onClick={() => handleSelect(option.value)}
+                  disabled={option.disabled}
+                >
+                  <span className="truncate">{option.label}</span>
+                </button>
+              );
+            })
           )}
         </div>
       )}

@@ -10,6 +10,7 @@ import "./RecordingOverlay.css";
 import { commands } from "@/bindings";
 import i18n, { syncLanguageFromSettings } from "@/i18n";
 import { getLanguageDirection } from "@/lib/utils/rtl";
+import { applyMaterialTheme, getStoredSeed } from "@/lib/utils/materialTheme";
 
 type OverlayState = "recording" | "transcribing" | "processing";
 type Resolved = "light" | "dark";
@@ -23,13 +24,37 @@ const RecordingOverlay: React.FC = () => {
   const [state, setState] = useState<OverlayState>("recording");
   const [levels, setLevels] = useState<number[]>(Array(16).fill(0));
   const [resolvedTheme, setResolvedTheme] = useState<Resolved>("dark");
+  const [iconColor, setIconColor] = useState<string>("#A5B4FC");
   const smoothedLevelsRef = useRef<number[]>(Array(16).fill(0));
   const direction = getLanguageDirection(i18n.language);
 
-  const iconColor = resolvedTheme === "dark" ? "#A5B4FC" : "#4f46e5";
-
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", resolvedTheme);
+  }, [resolvedTheme]);
+
+  // Recompute the icon color from the current M3 palette whenever the theme
+  // mode flips or the seed color changes. We read the CSS variable rather
+  // than hardcoding hexes so it stays in sync with the user's seed.
+  useEffect(() => {
+    const readAccent = () => {
+      const cs = getComputedStyle(document.documentElement);
+      const hex = cs.getPropertyValue("--md-sys-color-primary").trim();
+      if (hex) setIconColor(hex);
+    };
+
+    readAccent();
+
+    // The main window writes to localStorage when the user picks a new seed;
+    // `storage` events fire in *other* same-origin windows, which is exactly
+    // what we need here to refresh the overlay's palette.
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "ui_seed_color") {
+        applyMaterialTheme(getStoredSeed());
+        readAccent();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, [resolvedTheme]);
 
   useEffect(() => {
@@ -69,6 +94,31 @@ const RecordingOverlay: React.FC = () => {
     return () => {
       if (mq && mqHandler) mq.removeEventListener("change", mqHandler);
       unlistenThemePromise.then((fn) => fn());
+    };
+  }, []);
+
+  useEffect(() => {
+    const applyScale = (scale: number) => {
+      const clamped = Math.min(2, Math.max(0.5, scale));
+      (document.documentElement.style as unknown as { zoom: string }).zoom =
+        String(clamped);
+    };
+
+    commands
+      .getAppSettings()
+      .then((res) => {
+        if (res.status === "ok") {
+          applyScale(res.data.overlay_scale ?? 1);
+        }
+      })
+      .catch(() => {});
+
+    const unlistenPromise = listen<number>("overlay-scale", (ev) => {
+      applyScale(Number(ev.payload) || 1);
+    });
+
+    return () => {
+      unlistenPromise.then((fn) => fn());
     };
   }, []);
 

@@ -91,33 +91,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
     .map(([id, config]) => ({ id: id as SidebarSection, ...config }));
 
   return (
-    <div className="flex flex-col w-40 h-full border-e border-mid-gray/20 items-center px-2">
-      <div className="flex flex-col w-full items-center gap-1 pt-4 border-t border-mid-gray/20">
-        {availableSections.map((section) => {
-          const Icon = section.icon;
-          const isActive = activeSection === section.id;
+    <nav
+      aria-label="Settings sections"
+      className="flex flex-col w-20 h-full items-center gap-1 py-4 bg-surface border-e border-outline-variant"
+    >
+      {availableSections.map((section) => {
+        const Icon = section.icon;
+        const isActive = activeSection === section.id;
+        const label = t(section.labelKey);
 
-          return (
-            <div
-              key={section.id}
-              className={`flex gap-2 items-center p-2 w-full rounded-lg cursor-pointer transition-colors ${
+        return (
+          <button
+            key={section.id}
+            type="button"
+            onClick={() => onSectionChange(section.id)}
+            title={label}
+            aria-label={label}
+            aria-current={isActive ? "page" : undefined}
+            className="group flex flex-col items-center justify-center w-full gap-1 py-2 text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer focus:outline-none"
+          >
+            <span
+              className={`flex items-center justify-center h-8 w-14 rounded-full transition-[background-color,color] ${
                 isActive
-                  ? "bg-logo-primary/80"
-                  : "hover:bg-mid-gray/20 hover:opacity-100 opacity-85"
+                  ? "bg-secondary-container text-on-secondary-container"
+                  : "group-hover:bg-on-surface/8 group-focus-visible:bg-on-surface/12"
               }`}
-              onClick={() => onSectionChange(section.id)}
             >
-              <Icon width={24} height={24} className="shrink-0" />
-              <p
-                className="text-sm font-medium truncate"
-                title={t(section.labelKey)}
-              >
-                {t(section.labelKey)}
-              </p>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+              <Icon width={22} height={22} className="shrink-0" />
+            </span>
+            <span
+              className={`text-[11px] font-medium leading-tight truncate max-w-full px-1 ${
+                isActive ? "text-on-surface" : ""
+              }`}
+            >
+              {label}
+            </span>
+          </button>
+        );
+      })}
+    </nav>
   );
 };
