@@ -211,10 +211,14 @@ fn calculate_overlay_position(app_handle: &AppHandle) -> Option<(f64, f64)> {
     let settings = settings::get_settings(app_handle);
 
     let x = monitor_x + (monitor_width - OVERLAY_WIDTH) / 2.0;
+    // Positive user_offset pushes the overlay further inward from the anchored
+    // screen edge (useful to avoid covering the Windows taskbar / macOS menu
+    // bar). Negative values move toward the edge.
+    let user_offset = settings.overlay_offset as f64;
     let y = match settings.overlay_position {
-        OverlayPosition::Top => monitor_y + OVERLAY_TOP_OFFSET,
+        OverlayPosition::Top => monitor_y + OVERLAY_TOP_OFFSET + user_offset,
         OverlayPosition::Bottom | OverlayPosition::None => {
-            monitor_y + monitor_height - OVERLAY_HEIGHT - OVERLAY_BOTTOM_OFFSET
+            monitor_y + monitor_height - OVERLAY_HEIGHT - OVERLAY_BOTTOM_OFFSET - user_offset
         }
     };
 

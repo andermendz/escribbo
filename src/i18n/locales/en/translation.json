@@ -296,6 +296,10 @@
           "none": "None",
           "bottom": "Bottom",
           "top": "Top"
+        },
+        "offset": {
+          "title": "Overlay Offset",
+          "description": "Fine-tune the distance between the overlay and the anchored screen edge. Increase if the overlay overlaps the taskbar or menu bar."
         }
       },
       "pasteMethod": {

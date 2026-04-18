@@ -558,6 +558,19 @@ pub fn change_overlay_position_setting(app: AppHandle, position: String) -> Resu
 
 #[tauri::command]
 #[specta::specta]
+pub fn change_overlay_offset_setting(app: AppHandle, offset: i32) -> Result<(), String> {
+    let clamped = offset.clamp(-500, 500);
+    let mut settings = settings::get_settings(&app);
+    settings.overlay_offset = clamped;
+    settings::write_settings(&app, settings);
+
+    crate::utils::update_overlay_position(&app);
+
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn change_debug_mode_setting(app: AppHandle, enabled: bool) -> Result<(), String> {
     let mut settings = settings::get_settings(&app);
     settings.debug_mode = enabled;
