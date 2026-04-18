@@ -155,6 +155,7 @@ const settingUpdaters: {
     commands.changeWhisperGpuDevice(value as number),
   extra_recording_buffer_ms: (value) =>
     commands.changeExtraRecordingBufferSetting(value as number),
+  ui_theme: (value) => commands.changeUiThemeSetting(value as any),
 };
 
 export const useSettingsStore = create<SettingsStore>()(

@@ -8,8 +8,15 @@
   background: #000000cc;
   border-radius: 18px;
   opacity: 0;
-  transition: opacity 300ms ease-out;
+  transition:
+    opacity 300ms ease-out,
+    background-color 200ms ease-out;
   box-sizing: border-box;
+}
+
+[data-theme="light"] .recording-overlay {
+  background: #ffffffeb;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
 }
 
 .overlay-left {
@@ -41,11 +48,15 @@
 
 .bar {
   width: 6px;
-  background: #ffe5ee;
+  background: #c7d2fe;
   max-height: 20px;
   border-radius: 2px;
   transition: height 80ms linear;
   min-height: 4px;
+}
+
+[data-theme="light"] .bar {
+  background: #4f46e5;
 }
 
 .recording-overlay.fade-in {
@@ -58,6 +69,10 @@
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   animation: transcribing-pulse 1.5s infinite ease-in-out;
+}
+
+[data-theme="light"] .transcribing-text {
+  color: #1e1b4b;
 }
 
 @keyframes transcribing-pulse {
@@ -86,8 +101,12 @@
 }
 
 .cancel-button:hover {
-  background: #faa2ca33;
+  background: #a5b4fc33;
   transform: scale(1.05);
+}
+
+[data-theme="light"] .cancel-button:hover {
+  background: #4f46e526;
 }
 
 .cancel-button:active {

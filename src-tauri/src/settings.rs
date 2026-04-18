@@ -164,6 +164,20 @@ pub enum RecordingRetentionPeriod {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
+#[serde(rename_all = "lowercase")]
+pub enum UiTheme {
+    System,
+    Light,
+    Dark,
+}
+
+impl Default for UiTheme {
+    fn default() -> Self {
+        UiTheme::System
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type)]
 #[serde(rename_all = "snake_case")]
 pub enum KeyboardImplementation {
     Tauri,
@@ -430,6 +444,8 @@ pub struct AppSettings {
     pub whisper_gpu_device: i32,
     #[serde(default)]
     pub extra_recording_buffer_ms: u64,
+    #[serde(default)]
+    pub ui_theme: UiTheme,
 }
 
 fn default_model() -> String {
@@ -814,6 +830,7 @@ pub fn get_default_settings() -> AppSettings {
         ort_accelerator: OrtAcceleratorSetting::default(),
         whisper_gpu_device: default_whisper_gpu_device(),
         extra_recording_buffer_ms: 0,
+        ui_theme: UiTheme::default(),
     }
 }
 

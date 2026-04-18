@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Handy",
+  "productName": "Escribbo",
   "version": "0.8.2",
-  "identifier": "com.pais.handy",
+  "identifier": "com.andermendz.escribbo",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
@@ -29,6 +29,7 @@
     "targets": "all",
     "resources": ["resources/**/*"],
     "license": "MIT",
+    "licenseFile": "../LICENSE",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -58,17 +59,24 @@
       }
     },
     "windows": {
-      "signCommand": "trusted-signing-cli -e https://eus.codesigning.azure.net/ -a CJ-Signing -c cjpais-dev -d Handy %1",
+      "wix": {
+        "language": ["en-US"],
+        "bannerPath": "wix/banner.bmp",
+        "dialogImagePath": "wix/dialog.bmp",
+        "template": "wix/main.wxs"
+      },
       "nsis": {
-        "template": "nsis/installer.nsi"
+        "template": "nsis/installer.nsi",
+        "headerImage": "wix/banner.bmp",
+        "sidebarImage": "wix/dialog.bmp"
       }
     }
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJBQjcyMDk1MjA2NjAxRjkKUldUNUFXWWdsU0MzdXRRZi8zYzhqV2FaNUVDbDd2Rk5VM1IvWWowVXdmRFNKQ1BrMXF5RFFsLy8K",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVFMTgwMjNERDAyNzNDMzkKUldRNVBDZlFQUUlZWGtDZEh1Z2xDdWxLaEd4bDZVdnFHR01NUHVNR0hxNVFyVFJFMFhndDkzenMK",
       "endpoints": [
-        "https://github.com/cjpais/Handy/releases/latest/download/latest.json"
+        "https://github.com/andermendz/escribbo/releases/latest/download/latest.json"
       ]
     }
   }

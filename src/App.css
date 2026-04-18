@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  /* Design tokens */
-  --color-text: #0f0f0f;
+  /* Design tokens - Escribbo indigo palette */
+  --color-text: #0f172a;
   --color-background: #fbfbfb;
-  --color-background-ui: #da5893;
-  --color-logo-primary: #faa2ca;
-  --color-logo-stroke: #382731;
+  --color-background-ui: #4f46e5;
+  --color-logo-primary: #6366f1;
+  --color-logo-stroke: #312e81;
   --color-text-stroke: #f6f6f6;
-  --color-mid-gray: #808080;
+  --color-mid-gray: #64748b;
 }
 
 :root {
@@ -52,13 +52,27 @@
   text-align: center;
 }
 
+/* Dark theme — applied either via manual override [data-theme="dark"]
+   or by system preference when [data-theme="system"] / unset. */
+:root[data-theme="dark"] {
+  --color-text: #f1f5f9;
+  --color-background: #0f172a;
+  --color-background-ui: #6366f1;
+  --color-logo-primary: #818cf8;
+  --color-logo-stroke: #c7d2fe;
+  --color-text-stroke: #1e293b;
+  --color-mid-gray: #94a3b8;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
-    /* Colors - Dark Theme */
-    --color-text: #fbfbfb;
-    --color-background: #2c2b29;
-    --color-logo-primary: #f28cbb;
-    --color-logo-stroke: #fad1ed;
+  :root:not([data-theme="light"]) {
+    --color-text: #f1f5f9;
+    --color-background: #0f172a;
+    --color-background-ui: #6366f1;
+    --color-logo-primary: #818cf8;
+    --color-logo-stroke: #c7d2fe;
+    --color-text-stroke: #1e293b;
+    --color-mid-gray: #94a3b8;
   }
 }
 

@@ -12,14 +12,65 @@ import i18n, { syncLanguageFromSettings } from "@/i18n";
 import { getLanguageDirection } from "@/lib/utils/rtl";
 
 type OverlayState = "recording" | "transcribing" | "processing";
+type Resolved = "light" | "dark";
+
+const resolveSystemTheme = (): Resolved =>
+  window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 
 const RecordingOverlay: React.FC = () => {
   const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
   const [state, setState] = useState<OverlayState>("recording");
   const [levels, setLevels] = useState<number[]>(Array(16).fill(0));
+  const [resolvedTheme, setResolvedTheme] = useState<Resolved>("dark");
   const smoothedLevelsRef = useRef<number[]>(Array(16).fill(0));
   const direction = getLanguageDirection(i18n.language);
+
+  const iconColor = resolvedTheme === "dark" ? "#A5B4FC" : "#4f46e5";
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", resolvedTheme);
+  }, [resolvedTheme]);
+
+  useEffect(() => {
+    let mq: MediaQueryList | null = null;
+    let mqHandler: ((e: MediaQueryListEvent) => void) | null = null;
+
+    const syncThemeFromSettings = async () => {
+      try {
+        const res = await commands.getAppSettings();
+        const pref = res.status === "ok" ? res.data.ui_theme : "system";
+        if (mq && mqHandler) {
+          mq.removeEventListener("change", mqHandler);
+          mq = null;
+          mqHandler = null;
+        }
+        if (pref === "system") {
+          setResolvedTheme(resolveSystemTheme());
+          mq = window.matchMedia("(prefers-color-scheme: dark)");
+          mqHandler = () => setResolvedTheme(resolveSystemTheme());
+          mq.addEventListener("change", mqHandler);
+        } else {
+          setResolvedTheme(pref as Resolved);
+        }
+      } catch (e) {
+        console.warn("Failed to sync overlay theme:", e);
+      }
+    };
+
+    syncThemeFromSettings();
+    const unlistenThemePromise = listen("settings-changed", (ev) => {
+      const payload = ev.payload as { setting?: string } | undefined;
+      if (!payload?.setting || payload.setting === "ui_theme") {
+        syncThemeFromSettings();
+      }
+    });
+
+    return () => {
+      if (mq && mqHandler) mq.removeEventListener("change", mqHandler);
+      unlistenThemePromise.then((fn) => fn());
+    };
+  }, []);
 
   useEffect(() => {
     const setupEventListeners = async () => {
@@ -64,9 +115,9 @@ const RecordingOverlay: React.FC = () => {
 
   const getIcon = () => {
     if (state === "recording") {
-      return <MicrophoneIcon />;
+      return <MicrophoneIcon color={iconColor} />;
     } else {
-      return <TranscriptionIcon />;
+      return <TranscriptionIcon color={iconColor} />;
     }
   };
 
@@ -109,7 +160,7 @@ const RecordingOverlay: React.FC = () => {
               commands.cancelOperation();
             }}
           >
-            <CancelIcon />
+            <CancelIcon color={iconColor} />
           </div>
         )}
       </div>
