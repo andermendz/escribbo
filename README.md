@@ -322,7 +322,7 @@ To verify a release manually, set `ARTIFACT` to the filename you downloaded, sav
 
 ```bash
 # Replace with the file you downloaded
-ARTIFACT="Escribbo_0.9.2_amd64.AppImage"
+ARTIFACT="Escribbo_0.9.3_amd64.AppImage"
 
 python3 - "$ARTIFACT" <<'PY'
 import base64, pathlib, sys
@@ -348,6 +348,86 @@ Signature and comment signature verified
 ```
 
 Do not use `gpg` — these are not GPG signatures.
+
+## Releasing
+
+Releases are produced by the **Release** workflow
+([`.github/workflows/release.yml`](.github/workflows/release.yml)), which is
+wired so that creating a GitHub release is the only manual step — builds run
+automatically, installers are attached to the release, and the release is
+flipped from draft to public once the matrix finishes.
+
+### 1. Bump the version
+
+Update these five spots to the same semver (e.g. `0.9.3`):
+
+- `package.json` → `"version"`
+- `src-tauri/tauri.conf.json` → `"version"`
+- `src-tauri/Cargo.toml` → `[package] version`
+- `src-tauri/Cargo.lock` (run `cargo check` inside `src-tauri/` to refresh it)
+- `README.md` → `ARTIFACT="Escribbo_…_amd64.AppImage"` example in
+  [Verifying Release Signatures](#verifying-release-signatures)
+
+Do **not** touch `TSC_VERSION` in `.github/workflows/build.yml` — that pins the
+`trusted-signing-cli` crate, not the app.
+
+Commit and push to `main`:
+
+```bash
+git commit -am "chore(release): vX.Y.Z"
+git push origin main
+```
+
+### 2. Create a draft release
+
+```bash
+gh release create vX.Y.Z --draft --generate-notes
+```
+
+(Or in the GitHub UI: **Releases → Draft a new release → Save draft**.)
+
+### 3. Builds run automatically
+
+The `release.created` event triggers `.github/workflows/release.yml`, which
+runs the cross-platform matrix via `tauri-action` and uploads the installers
+directly to the draft:
+
+- macOS (`aarch64`, `x86_64`) → `.dmg`
+- Linux (`x86_64`, `aarch64`) → `.AppImage`, `.deb`, `.rpm`
+- Windows (`x86_64`, `aarch64`) → `.msi`, `.exe` (NSIS)
+
+Watch progress at
+[github.com/andermendz/escribbo/actions](https://github.com/andermendz/escribbo/actions/workflows/release.yml).
+
+### 4. Auto-publish
+
+When the matrix finishes, the `finalize` job flips the release from draft to
+public — even if one platform failed (e.g. a macOS signing flake). A cancelled
+run leaves the release as a draft so you can retry without overwriting notes.
+
+### Retrying a release
+
+If something transient fails, re-dispatch the workflow against the existing
+tag:
+
+```bash
+gh workflow run release.yml -f tag=vX.Y.Z
+```
+
+This also works for drafts (the workflow looks up releases via
+`listReleases`, not `getReleaseByTag`, so it finds drafts too).
+
+### Icons (when the mark changes)
+
+If the app icon changes, regenerate platform assets from the single source:
+
+```bash
+bun run tauri icon src-tauri/icons/icon.svg
+```
+
+That command resets `src-tauri/icons/android/values/ic_launcher_background.xml`
+to white; re-apply the dark plate afterwards so the white foreground stays
+visible on Android adaptive icons.
 
 ## Contributing
 
